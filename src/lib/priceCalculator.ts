@@ -1,87 +1,71 @@
-interface Car {
-    id: number;
-    category: string;
-    name: string;
-    localRates: {
-      hourly: { duration: string; kms: number; price: number }[];
-    };
-    exHrsRates: {
-      perMinute: number;
-      perKm: number;
-      perHour: number;
-    };
-    outstationRates: {
-      perKm: number;
-      minBillableKm: number;
-      driverAllowance: number;
-    };
+import { CarData } from "@/types"
+
+export type TripType = "oneWay" | "roundTrip" | "airport" | "local"
+
+export function calculatePrice(
+  car: CarData,
+  tripType: TripType,
+  distance: number,
+  hours?: number
+): number {
+  switch (tripType) {
+    case "oneWay":
+      return calculateOneWayPrice(car, distance)
+    case "roundTrip":
+      return calculateRoundTripPrice(car, distance)
+    case "airport":
+      return calculateAirportPrice(car, distance)
+    case "local":
+      return calculateLocalPrice(car, hours || 8, distance)
+    default:
+      return 0
   }
+}
+
+function calculateOneWayPrice(car: CarData, distance: number): number {
+  const { outstationRates } = car
+  const basePrice = distance * outstationRates.perKm
+  const minPrice = outstationRates.minBillableKm * outstationRates.perKm
+  const driverAllowance = outstationRates.driverAllowance
+
+  return Math.max(basePrice, minPrice) + driverAllowance
+}
+
+function calculateRoundTripPrice(car: CarData, distance: number): number {
+  // For round trip, we double the distance but only charge driver allowance once
+  const oneWayPrice = calculateOneWayPrice(car, distance * 2)
+  return oneWayPrice
+}
+
+function calculateAirportPrice(car: CarData, distance: number): number {
+  // Airport transfers typically have a minimum charge plus per km rate
+  const { outstationRates } = car
+  const basePrice = distance * (outstationRates.perKm * 1.1) // 10% premium for airport transfers
+  const minPrice = Math.min(distance, 50) * outstationRates.perKm // Minimum 50km charge
+  return Math.max(basePrice, minPrice)
+}
+
+function calculateLocalPrice(car: CarData, hours: number, distance: number): number {
+  const { localRates, exHrsRates } = car
   
-  type TripType = 'oneWay' | 'roundTrip' | 'local' | 'airport';
-  
-  export function calculatePrice(
-    car: Car,
-    tripType: TripType,
-    distance: number,
-    hours?: number
-  ): number {
-    switch (tripType) {
-      case 'local':
-        return calculateLocalPrice(car, hours || 4);
-      
-      case 'airport':
-        return calculateOutstationPrice(car, distance);
-      
-      case 'oneWay':
-        return calculateOutstationPrice(car, distance);
-      
-      case 'roundTrip':
-        return calculateOutstationPrice(car, distance);
-      
-      default:
-        return 0;
-    }
+  // Find the closest package
+  const package8hrs = localRates.hourly.find(rate => rate.duration === "8hrs")
+  if (!package8hrs) return 0
+
+  let totalPrice = package8hrs.price
+
+  // Calculate extra hours if any
+  if (hours > 8) {
+    const extraHours = hours - 8
+    totalPrice += extraHours * exHrsRates.perHour
   }
-  
-  function calculateLocalPrice(car: Car, hours: number): number {
-    // Find the closest package
-    let packagePrice = 0;
-    
-    if (hours <= 1) {
-      // 1 hour package
-      const package1Hr = car.localRates.hourly.find(p => p.duration === '1hrs');
-      if (package1Hr) {
-        packagePrice = package1Hr.price;
-      }
-    } else if (hours <= 4) {
-      // 4 hour package
-      const package4Hr = car.localRates.hourly.find(p => p.duration === '4hrs');
-      if (package4Hr) {
-        packagePrice = package4Hr.price;
-      }
-    } else {
-      // 8 hour package
-      const package8Hr = car.localRates.hourly.find(p => p.duration === '8hrs');
-      if (package8Hr) {
-        packagePrice = package8Hr.price;
-      }
-    }
-    
-    return packagePrice;
+
+  // Calculate extra distance if any
+  if (distance > package8hrs.kms) {
+    const extraKms = distance - package8hrs.kms
+    totalPrice += extraKms * exHrsRates.perKm
   }
-  
-  function calculateOutstationPrice(car: Car, distance: number): number {
-    const { perKm, minBillableKm, driverAllowance } = car.outstationRates;
-    
-    // Apply minimum billable kilometers
-    const billableDistance = Math.max(distance, minBillableKm);
-    
-    // Calculate base fare
-    const baseFare = billableDistance * perKm;
-    
-    // Add driver allowance
-    const totalFare = baseFare + driverAllowance;
-    
-    return totalFare;
-  }
+
+  return totalPrice
+}
   

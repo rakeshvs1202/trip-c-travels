@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Calendar, Clock, ArrowLeftRight } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Calendar, Clock, ArrowLeftRight, AlertCircle } from "lucide-react";
 import { debounce } from "lodash";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import "../styles/datepicker.css";
 import { useLoadScript, Autocomplete } from "@react-google-maps/api";
+import { useRouter } from "next/navigation";
+import { useBooking } from "@/app/providers";
 
 interface Place {
   place_id: string;
@@ -15,6 +17,8 @@ interface Place {
 }
 
 export default function BookingSection() {
+  const router = useRouter();
+  const { setBookingData } = useBooking();
   const [tripType, setTripType] = useState("ONE_WAY");
   const [fromCity, setFromCity] = useState("");
   const [toCity, setToCity] = useState("");
@@ -35,10 +39,50 @@ export default function BookingSection() {
     tollInfo?: string;
   } | null>(null);
 
+  // Add error state
+  const [errors, setErrors] = useState<{
+    fromCity?: string
+    toCity?: string
+    pickupDate?: string
+    returnDate?: string
+    pickupTime?: string
+  }>({})
+
+  // Add route cache
+  const routeCache = useRef<{[key: string]: {distance: string; duration: string}}>({});
+
   const { isLoaded } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
     libraries: ["places"],
   });
+
+  // Add debounced input handlers
+  const debouncedFromInput = useCallback(
+    debounce((value: string) => {
+      setFromCity(value);
+      setErrors(prev => ({ ...prev, fromCity: '' }));
+    }, 300),
+    []
+  );
+
+  const debouncedToInput = useCallback(
+    debounce((value: string) => {
+      setToCity(value);
+      setErrors(prev => ({ ...prev, toCity: '' }));
+    }, 300),
+    []
+  );
+
+  // Handle input changes with debouncing
+  const handleFromInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    debouncedFromInput(value);
+  };
+
+  const handleToInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    debouncedToInput(value);
+  };
 
   const generateTimeOptions = (selectedDate: Date | null) => {
     const times = [];
@@ -92,71 +136,92 @@ export default function BookingSection() {
       } else {
         setToCity(place.formatted_address);
       }
-
-      // If both locations and time are selected, calculate route details
-      if (fromCity && toCity && pickupTime) {
-        await calculateRouteDetails();
-      }
     }
   };
 
-  const calculateRouteDetails = async () => {
-    if (!fromCity || !toCity || !pickupTime) return;
+  // Debounced version of calculateRouteDetails
+  const debouncedCalculateRouteDetails = useCallback(
+    debounce(async () => {
+      if (!fromCity || !toCity || !pickupTime) return;
 
-    try {
-      const service = new google.maps.DistanceMatrixService();
-      const result = await service.getDistanceMatrix({
-        origins: [fromCity],
-        destinations: [toCity],
-        travelMode: google.maps.TravelMode.DRIVING,
-        drivingOptions: {
-          departureTime: new Date(
-            pickupDate?.setHours(
-              parseInt(pickupTime.split(":")[0]),
-              parseInt(pickupTime.split(":")[1])
-            ) || new Date()
-          ),
-          trafficModel: google.maps.TrafficModel.BEST_GUESS,
-        },
-      });
+      // Create cache key
+      const cacheKey = `${fromCity}-${toCity}-${pickupTime}`;
+      
+      // Check cache first
+      if (routeCache.current[cacheKey]) {
+        setRouteDetails(routeCache.current[cacheKey]);
+        return;
+      }
 
-      if (result.rows[0]?.elements[0]) {
-        const { distance, duration } = result.rows[0].elements[0];
-        setRouteDetails({
-          distance: distance.text,
-          duration: duration.text,
-          // Note: Toll information would require additional API integration
-          tollInfo: "Calculating...",
+      try {
+        const service = new google.maps.DistanceMatrixService();
+        const result = await service.getDistanceMatrix({
+          origins: [fromCity],
+          destinations: [toCity],
+          travelMode: google.maps.TravelMode.DRIVING,
+          drivingOptions: {
+            departureTime: new Date(
+              pickupDate?.setHours(
+                parseInt(pickupTime.split(":")[0]),
+                parseInt(pickupTime.split(":")[1])
+              ) || new Date()
+            ),
+            trafficModel: google.maps.TrafficModel.BEST_GUESS,
+          },
         });
+
+        if (result.rows[0]?.elements[0]) {
+          const { distance, duration } = result.rows[0].elements[0];
+          const details = {
+            distance: distance.text,
+            duration: duration.text,
+          };
+          
+          // Cache the result
+          routeCache.current[cacheKey] = details;
+          setRouteDetails(details);
+        }
+      } catch (error) {
+        console.error("Error calculating route details:", error);
       }
-    } catch (error) {
-      console.error("Error calculating route details:", error);
-    }
-  };
+    }, 500),
+    [fromCity, toCity, pickupTime, pickupDate]
+  );
 
-  useEffect(() => {
-    if (fromCity && toCity && pickupTime) {
-      calculateRouteDetails();
-    }
-  }, [fromCity, toCity, pickupTime]);
+  // Replace the old calculateRouteDetails with the debounced version
+  const calculateRouteDetails = useCallback(() => {
+    debouncedCalculateRouteDetails();
+  }, [debouncedCalculateRouteDetails]);
 
-  const getAutocompleteOptions = (type: "city" | "airport" | "address") => {
+  const getAutocompleteOptions = (
+    inputType: 'from' | 'to',
+    currentTripType: string,
+    currentAirportJourneyType?: 'pickup' | 'drop'
+  ): google.maps.places.AutocompleteOptions => {
     const options: google.maps.places.AutocompleteOptions = {
-      fields: ["formatted_address", "geometry", "name"],
+      fields: ["formatted_address", "geometry", "name", "place_id"],
+      componentRestrictions: { country: "in" },
     };
 
-    switch (type) {
-      case "city":
+    switch (currentTripType) {
+      case "ONE_WAY":
+      case "ROUND_TRIP":
         options.types = ["(cities)"];
         break;
-      case "airport":
-        options.types = ["airport"];
+      case "LOCAL":
+        options.types = ["(cities)"];
         break;
-      case "address":
-        options.types = ["address"];
+      case "AIRPORT":
+        if (!currentAirportJourneyType) break;
+
+        if (inputType === 'from') {
+          options.types = currentAirportJourneyType === 'pickup' ? ['airport'] : ['address'];
+        } else {
+          options.types = currentAirportJourneyType === 'pickup' ? ['address'] : ['airport'];
+        }
         break;
     }
-
+    console.log(`Autocomplete options for ${inputType} (${currentTripType}/${currentAirportJourneyType}):`, options.types);
     return options;
   };
 
@@ -165,6 +230,89 @@ export default function BookingSection() {
     setFromCity(toCity);
     setToCity(temp);
   };
+
+  // Validate single field
+  const validateField = (field: string, value: any) => {
+    switch (field) {
+      case 'fromCity':
+        return !value ? 'Pickup location is required' : ''
+      case 'toCity':
+        return !value ? 'Drop location is required' : ''
+      case 'pickupDate':
+        return !value ? 'Pickup date is required' : ''
+      case 'returnDate':
+        if (tripType === 'ROUND_TRIP') {
+          if (!value) {
+            return 'Return date is required for round trip'
+          }
+          if (value && pickupDate && new Date(value).getTime() < new Date(pickupDate).getTime()) {
+            return 'Return date must be after pickup date'
+          }
+        }
+        return ''
+      case 'pickupTime':
+        return !value ? 'Pickup time is required' : ''
+      default:
+        return ''
+    }
+  }
+
+  // Validate all fields
+  const validateForm = () => {
+    const newErrors = {
+      fromCity: validateField('fromCity', fromCity),
+      toCity: validateField('toCity', toCity),
+      pickupDate: validateField('pickupDate', pickupDate),
+      returnDate: validateField('returnDate', returnDate),
+      pickupTime: validateField('pickupTime', pickupTime),
+    }
+
+    setErrors(newErrors)
+    return !Object.values(newErrors).some(error => error)
+  }
+
+  const handleExploreCabs = async () => {
+    if (!validateForm()) {
+      return
+    }
+
+    // Convert trip type to match the expected format in BookingData
+    const normalizedTripType = tripType.toLowerCase().replace("_", "") as "oneWay" | "roundTrip" | "airport" | "local"
+
+    try {
+      // Get route details only when user clicks explore cabs
+      await calculateRouteDetails()
+
+      // Set booking data in context
+      setBookingData({
+        tripType: normalizedTripType,
+        source: fromCity,
+        destination: toCity,
+        pickupDate: pickupDate!,
+        pickupTime: pickupTime,
+        distance: parseFloat(routeDetails?.distance?.replace(/[^0-9.]/g, '') || "0"),
+        duration: parseInt(routeDetails?.duration?.replace(/[^0-9]/g, '') || "0"),
+        returnDate: returnDate || undefined,
+        returnTime: undefined
+      })
+
+      // Navigate to select-car page
+      router.push("/select-car")
+    } catch (error) {
+      console.error("Error processing booking:", error)
+      setErrors({ fromCity: "There was an error processing your request. Please try again." })
+    }
+  }
+
+  // Helper component for error message
+  const ErrorMessage = ({ message }: { message: string }) => (
+    message ? (
+      <div className="flex items-center gap-1 mt-1 text-red-500 text-sm">
+        <AlertCircle size={14} />
+        <span>{message}</span>
+      </div>
+    ) : null
+  )
 
   return (
     <section className="relative py-12 bg-gradient-to-b from-white to-gray-50">
@@ -197,16 +345,20 @@ export default function BookingSection() {
                     <Autocomplete
                       onLoad={handleFromAutocompleteLoad}
                       onPlaceChanged={() => handlePlaceSelect("from")}
+                      options={getAutocompleteOptions("from", tripType)}
                     >
                       <input
                         type="text"
-                        value={fromCity}
-                        onChange={(e) => setFromCity(e.target.value)}
+                        defaultValue={fromCity}
+                        onChange={handleFromInputChange}
                         placeholder="Enter City"
-                        className="w-full p-3 border rounded focus:ring-2 focus:ring-[#FF3131] focus:border-transparent"
+                        className={`w-full p-3 border rounded focus:ring-2 focus:ring-[#FF3131] focus:border-transparent ${
+                          errors.fromCity ? 'border-red-500' : ''
+                        }`}
                       />
                     </Autocomplete>
                   )}
+                  <ErrorMessage message={errors.fromCity || ''} />
                 </div>
                 <div className="lg:col-span-4">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -215,10 +367,15 @@ export default function BookingSection() {
                   <div className="relative">
                     <DatePicker
                       selected={pickupDate}
-                      onChange={(date: Date | null) => setPickupDate(date)}
+                      onChange={(date: Date | null) => {
+                        setPickupDate(date)
+                        setErrors(prev => ({ ...prev, pickupDate: '' }))
+                      }}
                       minDate={new Date()}
                       dateFormat="dd-MM-yyyy"
-                      className="w-full p-3 border rounded focus:ring-2 focus:ring-[#FF3131] focus:border-transparent"
+                      className={`w-full p-3 border rounded focus:ring-2 focus:ring-[#FF3131] focus:border-transparent ${
+                        errors.pickupDate ? 'border-red-500' : ''
+                      }`}
                       placeholderText="Select Date"
                       popperPlacement="bottom-start"
                     />
@@ -226,6 +383,7 @@ export default function BookingSection() {
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
                       size={20}
                     />
+                    <ErrorMessage message={errors.pickupDate || ''} />
                   </div>
                 </div>
                 <div className="lg:col-span-3">
@@ -239,7 +397,9 @@ export default function BookingSection() {
                       onClick={() => setShowTimeDropdown(!showTimeDropdown)}
                       readOnly
                       placeholder="Select Time"
-                      className="w-full p-3 border rounded focus:ring-2 focus:ring-[#FF3131] focus:border-transparent cursor-pointer"
+                      className={`w-full p-3 border rounded focus:ring-2 focus:ring-[#FF3131] focus:border-transparent cursor-pointer ${
+                        errors.pickupTime ? 'border-red-500' : ''
+                      }`}
                     />
                     <Clock
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
@@ -252,8 +412,9 @@ export default function BookingSection() {
                             key={time}
                             className="p-2 hover:bg-gray-100 cursor-pointer"
                             onClick={() => {
-                              setPickupTime(time);
-                              setShowTimeDropdown(false);
+                              setPickupTime(time)
+                              setErrors(prev => ({ ...prev, pickupTime: '' }))
+                              setShowTimeDropdown(false)
                             }}
                           >
                             {time}
@@ -261,6 +422,7 @@ export default function BookingSection() {
                         ))}
                       </div>
                     )}
+                    <ErrorMessage message={errors.pickupTime || ''} />
                   </div>
                 </div>
               </>
@@ -301,23 +463,24 @@ export default function BookingSection() {
                     <Autocomplete
                       onLoad={handleFromAutocompleteLoad}
                       onPlaceChanged={() => handlePlaceSelect("from")}
-                      options={getAutocompleteOptions(
-                        airportJourneyType === "pickup" ? "airport" : "address"
-                      )}
+                      options={getAutocompleteOptions("from", tripType, airportJourneyType)}
                     >
                       <input
                         type="text"
-                        value={fromCity}
-                        onChange={(e) => setFromCity(e.target.value)}
+                        defaultValue={fromCity}
+                        onChange={handleFromInputChange}
                         placeholder={
                           airportJourneyType === "pickup"
                             ? "Enter airport name"
                             : "Enter pickup address"
                         }
-                        className="w-full p-3 border rounded focus:ring-2 focus:ring-[#FF3131] focus:border-transparent"
+                        className={`w-full p-3 border rounded focus:ring-2 focus:ring-[#FF3131] focus:border-transparent ${
+                          errors.fromCity ? 'border-red-500' : ''
+                        }`}
                       />
                     </Autocomplete>
                   )}
+                  <ErrorMessage message={errors.fromCity || ''} />
                 </div>
 
                 <div className="lg:col-span-3">
@@ -330,23 +493,24 @@ export default function BookingSection() {
                     <Autocomplete
                       onLoad={handleToAutocompleteLoad}
                       onPlaceChanged={() => handlePlaceSelect("to")}
-                      options={getAutocompleteOptions(
-                        airportJourneyType === "pickup" ? "address" : "airport"
-                      )}
+                      options={getAutocompleteOptions("to", tripType, airportJourneyType)}
                     >
                       <input
                         type="text"
-                        value={toCity}
-                        onChange={(e) => setToCity(e.target.value)}
+                        defaultValue={toCity}
+                        onChange={handleToInputChange}
                         placeholder={
                           airportJourneyType === "pickup"
                             ? "Enter drop address"
                             : "Enter airport name"
                         }
-                        className="w-full p-3 border rounded focus:ring-2 focus:ring-[#FF3131] focus:border-transparent"
+                        className={`w-full p-3 border rounded focus:ring-2 focus:ring-[#FF3131] focus:border-transparent ${
+                          errors.toCity ? 'border-red-500' : ''
+                        }`}
                       />
                     </Autocomplete>
                   )}
+                  <ErrorMessage message={errors.toCity || ''} />
                 </div>
 
                 <div className="lg:col-span-2">
@@ -356,10 +520,15 @@ export default function BookingSection() {
                   <div className="relative">
                     <DatePicker
                       selected={pickupDate}
-                      onChange={(date: Date | null) => setPickupDate(date)}
+                      onChange={(date: Date | null) => {
+                        setPickupDate(date)
+                        setErrors(prev => ({ ...prev, pickupDate: '' }))
+                      }}
                       minDate={new Date()}
                       dateFormat="dd-MM-yyyy"
-                      className="w-full p-3 border rounded focus:ring-2 focus:ring-[#FF3131] focus:border-transparent"
+                      className={`w-full p-3 border rounded focus:ring-2 focus:ring-[#FF3131] focus:border-transparent ${
+                        errors.pickupDate ? 'border-red-500' : ''
+                      }`}
                       placeholderText="Select Date"
                       popperPlacement="bottom-start"
                     />
@@ -367,6 +536,7 @@ export default function BookingSection() {
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
                       size={20}
                     />
+                    <ErrorMessage message={errors.pickupDate || ''} />
                   </div>
                 </div>
 
@@ -381,7 +551,9 @@ export default function BookingSection() {
                       onClick={() => setShowTimeDropdown(!showTimeDropdown)}
                       readOnly
                       placeholder="Select Time"
-                      className="w-full p-3 border rounded focus:ring-2 focus:ring-[#FF3131] focus:border-transparent cursor-pointer"
+                      className={`w-full p-3 border rounded focus:ring-2 focus:ring-[#FF3131] focus:border-transparent cursor-pointer ${
+                        errors.pickupTime ? 'border-red-500' : ''
+                      }`}
                     />
                     <Clock
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
@@ -394,8 +566,9 @@ export default function BookingSection() {
                             key={time}
                             className="p-2 hover:bg-gray-100 cursor-pointer"
                             onClick={() => {
-                              setPickupTime(time);
-                              setShowTimeDropdown(false);
+                              setPickupTime(time)
+                              setErrors(prev => ({ ...prev, pickupTime: '' }))
+                              setShowTimeDropdown(false)
                             }}
                           >
                             {time}
@@ -403,6 +576,7 @@ export default function BookingSection() {
                         ))}
                       </div>
                     )}
+                    <ErrorMessage message={errors.pickupTime || ''} />
                   </div>
                 </div>
               </>
@@ -416,17 +590,20 @@ export default function BookingSection() {
                     <Autocomplete
                       onLoad={handleFromAutocompleteLoad}
                       onPlaceChanged={() => handlePlaceSelect("from")}
-                      options={getAutocompleteOptions("city")}
+                      options={getAutocompleteOptions("from", tripType)}
                     >
                       <input
                         type="text"
-                        value={fromCity}
-                        onChange={(e) => setFromCity(e.target.value)}
+                        defaultValue={fromCity}
+                        onChange={handleFromInputChange}
                         placeholder="Enter Pickup City"
-                        className="w-full p-3 border rounded focus:ring-2 focus:ring-[#FF3131] focus:border-transparent"
+                        className={`w-full p-3 border rounded focus:ring-2 focus:ring-[#FF3131] focus:border-transparent ${
+                          errors.fromCity ? 'border-red-500' : ''
+                        }`}
                       />
                     </Autocomplete>
                   )}
+                  <ErrorMessage message={errors.fromCity || ''} />
                 </div>
 
                 <div className="lg:col-span-3">
@@ -438,13 +615,16 @@ export default function BookingSection() {
                       <Autocomplete
                         onLoad={handleToAutocompleteLoad}
                         onPlaceChanged={() => handlePlaceSelect("to")}
+                        options={getAutocompleteOptions("to", tripType)}
                       >
                         <input
                           type="text"
-                          value={toCity}
-                          onChange={(e) => setToCity(e.target.value)}
+                          defaultValue={toCity}
+                          onChange={handleToInputChange}
                           placeholder="Enter Drop City"
-                          className="w-full p-3 border rounded focus:ring-2 focus:ring-[#FF3131] focus:border-transparent"
+                          className={`w-full p-3 border rounded focus:ring-2 focus:ring-[#FF3131] focus:border-transparent ${
+                            errors.toCity ? 'border-red-500' : ''
+                          }`}
                         />
                       </Autocomplete>
                     )}
@@ -454,6 +634,7 @@ export default function BookingSection() {
                     >
                       <ArrowLeftRight size={20} />
                     </button>
+                    <ErrorMessage message={errors.toCity || ''} />
                   </div>
                 </div>
 
@@ -464,10 +645,15 @@ export default function BookingSection() {
                   <div className="relative">
                     <DatePicker
                       selected={pickupDate}
-                      onChange={(date: Date | null) => setPickupDate(date)}
+                      onChange={(date: Date | null) => {
+                        setPickupDate(date)
+                        setErrors(prev => ({ ...prev, pickupDate: '' }))
+                      }}
                       minDate={new Date()}
                       dateFormat="dd-MM-yyyy"
-                      className="w-full p-3 border rounded focus:ring-2 focus:ring-[#FF3131] focus:border-transparent"
+                      className={`w-full p-3 border rounded focus:ring-2 focus:ring-[#FF3131] focus:border-transparent ${
+                        errors.pickupDate ? 'border-red-500' : ''
+                      }`}
                       placeholderText="Select Date"
                       popperPlacement="bottom-start"
                     />
@@ -475,6 +661,7 @@ export default function BookingSection() {
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
                       size={20}
                     />
+                    <ErrorMessage message={errors.pickupDate || ''} />
                   </div>
                 </div>
 
@@ -486,10 +673,15 @@ export default function BookingSection() {
                     <div className="relative">
                       <DatePicker
                         selected={returnDate}
-                        onChange={(date: Date | null) => setReturnDate(date)}
+                        onChange={(date: Date | null) => {
+                          setReturnDate(date)
+                          setErrors(prev => ({ ...prev, returnDate: '' }))
+                        }}
                         minDate={pickupDate || new Date()}
                         dateFormat="dd-MM-yyyy"
-                        className="w-full p-3 border rounded focus:ring-2 focus:ring-[#FF3131] focus:border-transparent"
+                        className={`w-full p-3 border rounded focus:ring-2 focus:ring-[#FF3131] focus:border-transparent ${
+                          errors.returnDate ? 'border-red-500' : ''
+                        }`}
                         placeholderText="Select Date"
                         popperPlacement="bottom-start"
                       />
@@ -497,6 +689,7 @@ export default function BookingSection() {
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
                         size={20}
                       />
+                      <ErrorMessage message={errors.returnDate || ''} />
                     </div>
                   </div>
                 )}
@@ -518,7 +711,9 @@ export default function BookingSection() {
                       onClick={() => setShowTimeDropdown(!showTimeDropdown)}
                       readOnly
                       placeholder="Select Time"
-                      className="w-full p-3 border rounded focus:ring-2 focus:ring-[#FF3131] focus:border-transparent cursor-pointer"
+                      className={`w-full p-3 border rounded focus:ring-2 focus:ring-[#FF3131] focus:border-transparent cursor-pointer ${
+                        errors.pickupTime ? 'border-red-500' : ''
+                      }`}
                     />
                     <Clock
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
@@ -531,8 +726,9 @@ export default function BookingSection() {
                             key={time}
                             className="p-2 hover:bg-gray-100 cursor-pointer"
                             onClick={() => {
-                              setPickupTime(time);
-                              setShowTimeDropdown(false);
+                              setPickupTime(time)
+                              setErrors(prev => ({ ...prev, pickupTime: '' }))
+                              setShowTimeDropdown(false)
                             }}
                           >
                             {time}
@@ -540,35 +736,18 @@ export default function BookingSection() {
                         ))}
                       </div>
                     )}
+                    <ErrorMessage message={errors.pickupTime || ''} />
                   </div>
                 </div>
               </>
             )}
           </div>
 
-          {/* Add route details display */}
-          {routeDetails && (
-            <div className="lg:col-span-12 mt-4 p-4 bg-gray-50 rounded-lg">
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <p className="text-sm text-gray-600">Distance</p>
-                  <p className="text-lg font-medium">{routeDetails.distance}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Duration</p>
-                  <p className="text-lg font-medium">{routeDetails.duration}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">
-                    Estimated Toll Charges
-                  </p>
-                  <p className="text-lg font-medium">{routeDetails.tollInfo}</p>
-                </div>
-              </div>
-            </div>
-          )}
 
-          <button className="w-full mt-6 px-8 py-3 bg-[#FF3131] text-white font-medium rounded hover:bg-[#E02020] transition-colors text-lg">
+          <button 
+            onClick={handleExploreCabs}
+            className="w-full mt-6 px-8 py-3 bg-[#FF3131] text-white font-medium rounded hover:bg-[#E02020] transition-colors text-lg"
+          >
             EXPLORE CABS
           </button>
         </div>

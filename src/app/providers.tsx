@@ -1,17 +1,7 @@
 "use client"
 
 import { createContext, useState, useContext, type ReactNode } from "react"
-
-type BookingData = {
-  tripType: "oneWay" | "roundTrip" | "local" | "airport"
-  source: string
-  destination: string
-  pickupDate: Date
-  pickupTime: string
-  distance: number
-  duration: number
-  selectedCar?: number
-}
+import { BookingData } from "@/types"
 
 type BookingContextType = {
   bookingData: BookingData

@@ -1,49 +1,32 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose from 'mongoose';
 
-export interface ICar extends Document {
-  id: number;
-  category: string;
-  name: string;
-  image: string;
-  seatingCapacity: number;
-  localRates: {
-    hourly: { duration: string; kms: number; price: number }[];
-  };
-  exHrsRates: {
-    perMinute: number;
-    perKm: number;
-    perHour: number;
-  };
-  outstationRates: {
-    perKm: number;
-    minBillableKm: number;
-    driverAllowance: number;
-  };
-}
-
-const CarSchema: Schema = new Schema({
-  id: { type: Number, required: true },
-  category: { type: String, required: true },
-  name: { type: String, required: true },
-  image: { type: String, required: true },
-  seatingCapacity: { type: Number, required: true },
-  localRates: {
-    hourly: [{ 
-      duration: String,
-      kms: Number,
-      price: Number
-    }]
-  },
-  exHrsRates: {
-    perMinute: Number,
-    perKm: Number,
-    perHour: Number
-  },
-  outstationRates: {
-    perKm: Number,
-    minBillableKm: Number,
-    driverAllowance: Number
-  }
+const hourlyRateSchema = new mongoose.Schema({
+  duration: String,
+  kms: Number,
+  price: Number,
 });
 
-export default mongoose.models.Car || mongoose.model<ICar>('Car', CarSchema);
+const localRatesSchema = new mongoose.Schema({
+  hourly: [hourlyRateSchema],
+});
+
+const outstationRatesSchema = new mongoose.Schema({
+  perKm: Number,
+  minBillableKm: Number,
+  driverAllowance: Number,
+});
+
+const carSchema = new mongoose.Schema({
+  id: Number,
+  category: String,
+  name: String,
+  image: String,
+  seatingCapacity: Number,
+  luggageCapacity: Number,
+  features: [String],
+  localRates: localRatesSchema,
+  outstationRates: outstationRatesSchema,
+});
+
+// Check if the model is already defined to prevent the "Cannot overwrite model once compiled" error
+export default mongoose.models.Car || mongoose.model('Car', carSchema);

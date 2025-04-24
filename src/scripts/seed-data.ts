@@ -1,13 +1,9 @@
-import mongoose from "mongoose"
-import Car from "@/models/Car"
-import dbConnect from "@/lib/mongodb"
-
-const carData = [
+export const carData = [
   {
     id: 1,
     category: "Sedan",
     name: "Sedan",
-    image: "/cars/sedan.jpg",
+    image: "/cars/sedan.svg",
     seatingCapacity: 4,
     luggageCapacity: 2,
     features: ["AC", "Music System", "Comfortable Seating"],
@@ -17,11 +13,6 @@ const carData = [
         { duration: "4hrs", kms: 40, price: 1160 },
         { duration: "8hrs", kms: 80, price: 2320 },
       ],
-    },
-    exHrsRates: {
-      perMinute: 2,
-      perKm: 17,
-      perHour: 180,
     },
     outstationRates: {
       perKm: 17,
@@ -33,7 +24,7 @@ const carData = [
     id: 2,
     category: "Sedan",
     name: "Ciaze / Honda City",
-    image: "/cars/ciaze.jpg",
+    image: "/cars/sedan.svg",
     seatingCapacity: 4,
     luggageCapacity: 3,
     features: ["AC", "Music System", "Comfortable Seating", "Extra Legroom"],
@@ -43,11 +34,6 @@ const carData = [
         { duration: "4hrs", kms: 40, price: 1360 },
         { duration: "8hrs", kms: 80, price: 2720 },
       ],
-    },
-    exHrsRates: {
-      perMinute: 2.5,
-      perKm: 19,
-      perHour: 210,
     },
     outstationRates: {
       perKm: 19,
@@ -59,7 +45,7 @@ const carData = [
     id: 3,
     category: "SUV",
     name: "Ertiga / Similar",
-    image: "/cars/ertiga.jpg",
+    image: "/cars/suv.svg",
     seatingCapacity: 6,
     luggageCapacity: 3,
     features: ["AC", "Music System", "Spacious", "Family Friendly"],
@@ -69,11 +55,6 @@ const carData = [
         { duration: "4hrs", kms: 40, price: 1512 },
         { duration: "8hrs", kms: 80, price: 3024 },
       ],
-    },
-    exHrsRates: {
-      perMinute: 2.8,
-      perKm: 21,
-      perHour: 210,
     },
     outstationRates: {
       perKm: 22,
@@ -85,7 +66,7 @@ const carData = [
     id: 4,
     category: "SUV",
     name: "Innova",
-    image: "/cars/innova.jpg",
+    image: "/cars/suv.svg",
     seatingCapacity: 7,
     luggageCapacity: 4,
     features: ["AC", "Music System", "Spacious", "Comfortable for Long Journeys"],
@@ -95,11 +76,6 @@ const carData = [
         { duration: "4hrs", kms: 40, price: 1800 },
         { duration: "8hrs", kms: 80, price: 3600 },
       ],
-    },
-    exHrsRates: {
-      perMinute: 3.5,
-      perKm: 24,
-      perHour: 270,
     },
     outstationRates: {
       perKm: 23,
@@ -111,7 +87,7 @@ const carData = [
     id: 5,
     category: "SUV",
     name: "Innova Crysta",
-    image: "/cars/innova-crysta.jpg",
+    image: "/cars/suv.svg",
     seatingCapacity: 7,
     luggageCapacity: 4,
     features: ["AC", "Music System", "Premium Interior", "Extra Comfort"],
@@ -121,11 +97,6 @@ const carData = [
         { duration: "4hrs", kms: 40, price: 1960 },
         { duration: "8hrs", kms: 80, price: 3920 },
       ],
-    },
-    exHrsRates: {
-      perMinute: 3.6,
-      perKm: 27,
-      perHour: 330,
     },
     outstationRates: {
       perKm: 25,
@@ -231,23 +202,3 @@ const carData = [
     },
   },
 ]
-
-async function seedDatabase() {
-  try {
-    await dbConnect()
-
-    // Clear existing data
-    await Car.deleteMany({})
-
-    // Insert new data
-    await Car.insertMany(carData)
-
-    console.log("Database seeded successfully!")
-  } catch (error) {
-    console.error("Error seeding database:", error)
-  } finally {
-    mongoose.connection.close()
-  }
-}
-
-seedDatabase()

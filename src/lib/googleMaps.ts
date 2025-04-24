@@ -1,4 +1,4 @@
-/// <reference types="@types/googlemaps" />
+/// <reference types="@types/google.maps" />
 
 declare global {
     interface Window {
