@@ -13,6 +13,12 @@ export interface CarData {
       price: number
     }>
   }
+  // Optional extra hour/distance rates for local trips
+  exHrsRates?: {
+    perMinute: number
+    perKm: number
+    perHour: number
+  }
   outstationRates: {
     perKm: number
     minBillableKm: number

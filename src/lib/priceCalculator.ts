@@ -46,7 +46,7 @@ function calculateAirportPrice(car: CarData, distance: number): number {
 }
 
 function calculateLocalPrice(car: CarData, hours: number, distance: number): number {
-  const { localRates, exHrsRates } = car
+  const { localRates, exHrsRates = { perMinute: 0, perKm: 0, perHour: 0 } } = car
   
   // Find the closest package
   const package8hrs = localRates.hourly.find(rate => rate.duration === "8hrs")
@@ -68,4 +68,3 @@ function calculateLocalPrice(car: CarData, hours: number, distance: number): num
 
   return totalPrice
 }
-  
