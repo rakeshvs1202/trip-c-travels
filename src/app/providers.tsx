@@ -10,7 +10,7 @@ type BookingContextType = {
 }
 
 const defaultBookingData: BookingData = {
-  tripType: "oneWay",
+  tripType: "outstation",
   source: "",
   destination: "",
   pickupDate: new Date(),
