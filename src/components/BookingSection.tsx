@@ -138,9 +138,8 @@ export default function BookingSection() {
     }
   };
 
-  // Debounced version of calculateRouteDetails
-  const debouncedCalculateRouteDetails = useCallback(
-    debounce(async () => {
+  const calculateRouteDetails = useCallback(
+    async () => {
       if (!fromCity || !toCity || !pickupTime) return;
 
       // Create cache key
@@ -183,14 +182,9 @@ export default function BookingSection() {
       } catch (error) {
         console.error("Error calculating route details:", error);
       }
-    }, 500),
-    [fromCity, toCity, pickupTime, pickupDate]
+    },
+    [fromCity, toCity, pickupTime, pickupDate, setRouteDetails]
   );
-
-  // Replace the old calculateRouteDetails with the debounced version
-  const calculateRouteDetails = useCallback(() => {
-    debouncedCalculateRouteDetails();
-  }, [debouncedCalculateRouteDetails]);
 
   const getAutocompleteOptions = (
     inputType: 'from' | 'to',
@@ -240,7 +234,7 @@ export default function BookingSection() {
       case 'pickupDate':
         return !value ? 'Pickup date is required' : ''
       case 'returnDate':
-        if (tripType === 'outstation') {
+        if (tripType === 'OUTSTATION') {
           if (!value) {
             return 'Return date is required for outstation trip'
           }
@@ -297,24 +291,28 @@ export default function BookingSection() {
     return !Object.values(newErrors).some(error => error)
   }
 
-  const handleExploreCabs = useCallback(() => {
+  const handleExploreCabs = useCallback(async () => {
     if (!validateForm()) return
 
     try {
       // Get route details only when needed (not for local trips)
-      if (tripType !== 'local') {
-        calculateRouteDetails()
+      if (tripType !== 'LOCAL') {
+        await calculateRouteDetails();
       }
+
+      // Create fresh cache key to access latest data
+      const cacheKey = `${fromCity}-${toCity}-${pickupTime}`;
+      const currentDetails = routeCache.current[cacheKey];
 
       // Set booking data in session storage
       const bookingData = {
-        tripType: tripType as 'local' | 'outstation' | 'airport',
+        tripType: tripType as 'LOCAL' | 'OUTSTATION' | 'AIRPORT',
         source: fromCity!,
-        destination: tripType === 'local' ? fromCity! : toCity!,
+        destination: tripType === 'LOCAL' ? fromCity! : toCity!,
         pickupDate: pickupDate!,
         pickupTime: pickupTime!,
-        distance: tripType === 'local' ? 0 : parseFloat(routeDetails?.distance?.replace(/[^0-9.]/g, '') || "0"),
-        duration: tripType === 'local' ? 0 : parseInt(routeDetails?.duration?.replace(/[^0-9]/g, '') || "0"),
+        distance: tripType === 'LOCAL' ? 0 :parseFloat(currentDetails?.distance?.replace(/[^0-9.]/g, '') || "0"),
+        duration: tripType === 'LOCAL' ? 0 : currentDetails?.duration || "0",
         returnDate: returnDate || undefined,
         returnTime: undefined
       }

@@ -143,16 +143,35 @@ export default function ContactDetails() {
                   <div className="flex justify-between">
                     <span className="text-gray-600">Pickup Date</span>
                     <span className="font-medium">
-                        {bookingDetails.pickupDate.toLocaleDateString("en-IN", {
+                      {bookingDetails.pickupDate && (
+                        new Date(bookingDetails.pickupDate).toLocaleDateString("en-IN", {
                           day: 'numeric',
                           month: 'long',
                           year: 'numeric'
                         }).replace(/(\d+)/, (_:any, day:any) => {
                           const numericDay = parseInt(day)
                           return `${numericDay}${getOrdinalSuffix(numericDay)}`
-                        })} at {bookingDetails.pickupTime}
-                      </span>
+                        })
+                      )} at {bookingDetails.pickupTime}
+                    </span>
                   </div>
+                  {bookingDetails?.returnDate && (
+                    <div className="flex justify-between">
+                    <span className="text-gray-600">Return Date</span>
+                    <span className="font-medium">
+                      {bookingDetails.returnDate && (
+                        new Date(bookingDetails.returnDate).toLocaleDateString("en-IN", {
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric'
+                        }).replace(/(\d+)/, (_:any, day:any) => {
+                          const numericDay = parseInt(day)
+                          return `${numericDay}${getOrdinalSuffix(numericDay)}`
+                        })
+                      )}
+                    </span>
+                  </div>
+                  )}
                   <div className="flex justify-between">
                     <span className="text-gray-600">Car Type</span>
                     <span className="font-medium">{bookingDetails.selectedCar?.name}</span>

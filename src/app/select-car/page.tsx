@@ -55,15 +55,15 @@ export default function SelectCar() {
     const { distance, tripType } = bookingData;
     let totalPrice = 0;
 
-    switch (tripType) {
-      case "outstation":
+    switch (tripType.toUpperCase()) {
+      case "OUTSTATION":
         totalPrice = Math.max(
           car.outstationRates.minBillableKm,
-          distance * 2
+          distance*2
         ) * car.outstationRates.perKm + car.outstationRates.driverAllowance;
         break;
 
-      case "airport":
+      case "AIRPORT":
         totalPrice = Math.max(
           car.outstationRates.minBillableKm,
           distance
