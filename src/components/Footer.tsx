@@ -47,22 +47,17 @@ export default function Footer() {
             <h3 className="text-lg font-semibold mb-4">Our Services</h3>
             <ul className="space-y-2">
               <li>
-                <Link href="#services" className="text-gray-400 hover:text-white transition-colors">
-                  Roundtrip Cabs
+                <Link href="/#services" className="text-gray-400 hover:text-white transition-colors">
+                  Outstation Trips
                 </Link>
               </li>
               <li>
-                <Link href="#services" className="text-gray-400 hover:text-white transition-colors">
-                  Oneway Drops
-                </Link>
-              </li>
-              <li>
-                <Link href="#services" className="text-gray-400 hover:text-white transition-colors">
+                <Link href="/#services" className="text-gray-400 hover:text-white transition-colors">
                   Local Rentals
                 </Link>
               </li>
               <li>
-                <Link href="#services" className="text-gray-400 hover:text-white transition-colors">
+                <Link href="/#services" className="text-gray-400 hover:text-white transition-colors">
                   Airport Transfers
                 </Link>
               </li>

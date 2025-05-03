@@ -10,8 +10,12 @@ export interface CarData {
     hourly: Array<{
       duration: string
       kms: number
-      price: number
     }>
+    price: [{
+      perMinute: number
+      perKm: number
+    },
+    { exMinRate: number, exKmRate: number }]
   }
   // Optional extra hour/distance rates for local trips
   exHrsRates?: {
@@ -27,7 +31,7 @@ export interface CarData {
 }
 
 export interface BookingData {
-  tripType: "oneWay" | "roundTrip" | "airport" | "local"
+  tripType: "outstation" | "airport" | "local"
   source: string
   destination: string
   pickupDate: Date

@@ -1,6 +1,6 @@
 import { CarData } from "@/types"
 
-export type TripType = "oneWay" | "roundTrip" | "airport" | "local"
+export type TripType = "outstation" | "airport" | "local"
 
 export function calculatePrice(
   car: CarData,
@@ -9,9 +9,7 @@ export function calculatePrice(
   hours?: number
 ): number {
   switch (tripType) {
-    case "oneWay":
-      return calculateOneWayPrice(car, distance)
-    case "roundTrip":
+    case 'outstation':
       return calculateRoundTripPrice(car, distance)
     case "airport":
       return calculateAirportPrice(car, distance)

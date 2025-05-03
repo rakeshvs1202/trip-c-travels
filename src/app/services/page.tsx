@@ -2,242 +2,208 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import Image from "next/image"
+import { useLoadScript, Autocomplete } from "@react-google-maps/api"
 import { useBooking } from "@/app/providers"
-import { Check, Info, MapPin, Calendar, Users, Briefcase } from "lucide-react"
-import { calculatePrice } from "@/lib/priceCalculator"
 
-interface Car {
-  id: number
-  category: string
-  name: string
-  image: string
-  seatingCapacity: number
-  luggageCapacity: number
-  features: string[]
-  price: number
-}
-
-export default function SelectCar() {
+export default function ContactDetails() {
   const router = useRouter()
-  const { bookingData, setBookingData } = useBooking()
-  const [cars, setCars] = useState<Car[]>([])
-  const [loading, setLoading] = useState(true)
-  const [selectedCar, setSelectedCar] = useState<number | null>(null)
+  const { bookingData } = useBooking()
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    mobile: "",
+    pickup: ""
+  })
+  const [bookingDetails, setBookingDetails] = useState<any>(null)
 
+  const { isLoaded } = useLoadScript({
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+    libraries: ["places"]
+  })
+  const getOrdinalSuffix = (day: number) => {
+    if (day > 3 && day < 21) return 'th'
+    switch (day % 10) {
+      case 1: return 'st'
+      case 2: return 'nd'
+      case 3: return 'rd'
+      default: return 'th'
+    }
+  }
   useEffect(() => {
-    // Redirect if no booking data
-    if (!bookingData.source || !bookingData.destination) {
-      router.push("/")
-      return
+    // Retrieve booking details from sessionStorage
+    const storedBooking = sessionStorage.getItem("bookingData")
+    if (storedBooking) {
+      setBookingDetails(JSON.parse(storedBooking))
     }
+  }, [])
 
-    // Fetch cars data
-    const fetchCars = async () => {
-      try {
-        const response = await fetch("/api/cars")
-        const data = await response.json()
-
-        // Calculate price for each car based on trip type and distance
-        const carsWithPrices = data.map((car: any) => ({
-          ...car,
-          price: calculatePrice(
-            car,
-            bookingData.tripType,
-            bookingData.distance,
-            bookingData.tripType === "local" ? bookingData.duration / 60 : undefined, // Convert minutes to hours
-          ),
-        }))
-
-        setCars(carsWithPrices)
-      } catch (error) {
-        console.error("Error fetching cars:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchCars()
-  }, [bookingData, router])
-
-  const handleCarSelect = (carId: number) => {
-    setSelectedCar(carId)
-    setBookingData({ selectedCar: carId })
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    })
   }
 
-  const handleContinue = () => {
-    if (selectedCar) {
-      router.push("/booking-details")
-    } else {
-      alert("Please select a car to continue")
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center pt-20">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-      </div>
-    )
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    // Handle form submission
+    console.log(formData)
+    // Navigate to next page or process booking
   }
 
   return (
     <div className="min-h-screen pt-20 pb-16 bg-light-gray">
       <div className="container mx-auto px-4">
-        <h1 className="text-3xl font-bold text-center mb-8 font-heading">Select Your Car</h1>
-
-        {/* Trip Summary */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-          <h2 className="text-xl font-semibold mb-4">Trip Summary</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="flex items-start">
-              <MapPin className="text-primary mr-2 flex-shrink-0 mt-1" size={18} />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Contact Form */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-xl font-semibold mb-6">Contact & Pickup Details</h2>
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <p className="text-sm text-gray-500">Trip Type</p>
-                <p className="font-medium">
-                  {bookingData.tripType === "oneWay" && "One Way Trip"}
-                  {bookingData.tripType === "roundTrip" && "Round Trip"}
-                  {bookingData.tripType === "local" && "Local Package"}
-                  {bookingData.tripType === "airport" && "Airport Transfer"}
-                </p>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  className="w-full p-2 border rounded-md"
+                  required
+                />
               </div>
-            </div>
-
-            <div className="flex items-start">
-              <MapPin className="text-primary mr-2 flex-shrink-0 mt-1" size={18} />
               <div>
-                <p className="text-sm text-gray-500">From</p>
-                <p className="font-medium">{bookingData.source}</p>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  className="w-full p-2 border rounded-md"
+                  required
+                />
               </div>
-            </div>
-
-            <div className="flex items-start">
-              <MapPin className="text-primary mr-2 flex-shrink-0 mt-1" size={18} />
               <div>
-                <p className="text-sm text-gray-500">To</p>
-                <p className="font-medium">{bookingData.destination}</p>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Mobile</label>
+                <input
+                  type="tel"
+                  name="mobile"
+                  value={formData.mobile}
+                  onChange={handleInputChange}
+                  className="w-full p-2 border rounded-md"
+                  required
+                />
               </div>
-            </div>
-
-            <div className="flex items-start">
-              <Calendar className="text-primary mr-2 flex-shrink-0 mt-1" size={18} />
               <div>
-                <p className="text-sm text-gray-500">Pickup Date & Time</p>
-                <p className="font-medium">
-                  {bookingData.pickupDate.toLocaleDateString("en-IN", {
-                    day: "2-digit",
-                    month: "short",
-                    year: "numeric",
-                  })}{" "}
-                  at {bookingData.pickupTime}
-                </p>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Pickup Location</label>
+                {isLoaded && (
+                  <Autocomplete
+                    onLoad={(autocomplete) => {
+                      console.log("Autocomplete loaded:", autocomplete)
+                    }}
+                    onPlaceChanged={() => {
+                      // Handle place selection
+                    }}
+                  >
+                    <input
+                      type="text"
+                      name="pickup"
+                      value={formData.pickup}
+                      onChange={handleInputChange}
+                      className="w-full p-2 border rounded-md"
+                      placeholder="Enter pickup location"
+                      required
+                    />
+                  </Autocomplete>
+                )}
               </div>
-            </div>
+              <button
+                type="submit"
+                className="w-full bg-primary text-white py-2 rounded-md hover:bg-primary-dark"
+              >
+                Proceed
+              </button>
+            </form>
           </div>
 
-          {bookingData.distance > 0 && (
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <div className="flex items-center justify-between">
-                <p className="text-sm">
-                  <span className="font-medium">Estimated Distance:</span> {bookingData.distance.toFixed(1)} km
-                </p>
-                <p className="text-sm">
-                  <span className="font-medium">Estimated Duration:</span> {Math.ceil(bookingData.duration / 60)} hr{" "}
-                  {Math.ceil(bookingData.duration % 60)} min
-                </p>
-              </div>
+          {/* Booking Details */}
+          <div className="space-y-6">
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h2 className="text-xl font-semibold mb-4">Your Booking Details</h2>
+              {bookingDetails && (
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Pickup City</span>
+                    <span className="font-medium">{bookingDetails.source}</span>
+                  </div>
+                  {
+                    bookingDetails.destination && (<div className="flex justify-between">
+                      <span className="text-gray-600">Drop City</span>
+                      <span className="font-medium">{bookingDetails.destination}</span>
+                    </div>)
+                  }
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Pickup Date</span>
+                    <span className="font-medium">
+                        {bookingDetails.pickupDate.toLocaleDateString("en-IN", {
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric'
+                        }).replace(/(\d+)/, (_:any, day:any) => {
+                          const numericDay = parseInt(day)
+                          return `${numericDay}${getOrdinalSuffix(numericDay)}`
+                        })} at {bookingDetails.pickupTime}
+                      </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Car Type</span>
+                    <span className="font-medium">{bookingDetails.selectedCar?.name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Total Fare</span>
+                    <span className="font-medium">₹{bookingDetails.totalFare}</span>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
-        </div>
 
-        {/* Car List */}
-        <div className="space-y-6">
-          {cars.map((car) => (
-            <div
-              key={car.id}
-              className={`bg-white rounded-lg shadow-md overflow-hidden transition-all ${
-                selectedCar === car.id ? "ring-2 ring-primary" : "hover:shadow-lg"
-              }`}
-            >
-              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4">
-                {/* Car Image */}
-                <div className="p-4 flex items-center justify-center md:border-r border-gray-200">
-                  <Image
-                    src={car.image || "/placeholder.svg"}
-                    alt={car.name}
-                    width={200}
-                    height={120}
-                    className="object-contain h-32"
-                  />
-                </div>
-
-                {/* Car Details */}
-                <div className="p-4 md:col-span-2 lg:col-span-2 flex flex-col justify-between">
-                  <div>
-                    <h3 className="text-xl font-semibold">{car.name}</h3>
-                    <p className="text-sm text-gray-500 mb-2">{car.category}</p>
-
-                    <div className="grid grid-cols-2 gap-2 mb-4">
-                      <div className="flex items-center">
-                        <Users size={16} className="text-gray-500 mr-2" />
-                        <span className="text-sm">{car.seatingCapacity} Seater</span>
-                      </div>
-                      <div className="flex items-center">
-                        <Briefcase size={16} className="text-gray-500 mr-2" />
-                        <span className="text-sm">{car.luggageCapacity} Luggage</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    {car.features.map((feature, index) => (
-                      <div key={index} className="flex items-center text-sm text-gray-600">
-                        <Check size={14} className="text-green-500 mr-1" />
-                        <span>{feature}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Price and Select Button */}
-                <div className="p-4 bg-gray-50 flex flex-col justify-between">
-                  <div>
-                    <p className="text-2xl font-bold text-primary">₹{car.price.toFixed(0)}</p>
-                    <p className="text-sm text-gray-500 mb-4">
-                      {bookingData.tripType === "local" ? "Package Price" : "Total Price"}
-                    </p>
-
-                    <div className="flex items-start mb-4">
-                      <Info size={16} className="text-gray-500 mr-2 flex-shrink-0 mt-0.5" />
-                      <p className="text-xs text-gray-500">
-                        {bookingData.tripType === "local"
-                          ? "Extra charges applicable beyond package limits"
-                          : "Includes all taxes and toll charges"}
-                      </p>
-                    </div>
-                  </div>
-
-                  <button
-                    className={`w-full py-2 rounded-md font-medium transition-colors ${
-                      selectedCar === car.id
-                        ? "bg-primary text-white"
-                        : "bg-white border border-primary text-primary hover:bg-primary hover:text-white"
-                    }`}
-                    onClick={() => handleCarSelect(car.id)}
-                  >
-                    {selectedCar === car.id ? "Selected" : "Select"}
-                  </button>
-                </div>
-              </div>
+            {/* Inclusions */}
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h3 className="text-lg font-semibold mb-4">Inclusions</h3>
+              <ul className="space-y-3">
+                <li className="flex items-center gap-2">
+                  <span className="w-6 h-6 flex items-center justify-center rounded-full border">🚗</span>
+                  Pay ₹12/km after 80 km
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="w-6 h-6 flex items-center justify-center rounded-full border">⏰</span>
+                  Pay ₹144/hr after 8 hours
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="w-6 h-6 flex items-center justify-center rounded-full border">🌙</span>
+                  Night Allowance
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="w-6 h-6 flex items-center justify-center rounded-full border">🛣️</span>
+                  Toll / State tax
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="w-6 h-6 flex items-center justify-center rounded-full border">🅿️</span>
+                  Parking
+                </li>
+              </ul>
             </div>
-          ))}
-        </div>
 
-        {/* Continue Button */}
-        <div className="mt-8 text-center">
-          <button className="btn-primary" onClick={handleContinue} disabled={!selectedCar}>
-            Continue to Booking
-          </button>
+            {/* T&C */}
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h3 className="text-lg font-semibold mb-4">Terms & Conditions</h3>
+              <ul className="space-y-2 text-sm text-gray-600">
+                <li>• Your Trip has a KM limit as well as an Hours limit. If your usage exceeds these limits, you will be charged for the excess KM and/or hours used.</li>
+                <li>• The KM and Hour(s) usage will be calculated starting from your pick-up point and back to the pick-up point.</li>
+                <li>• The Airport entry charge, if applicable, is not included in the fare and will be charged extra.</li>
+                <li>• All road toll fees, parking charges, state taxes etc. if applicable will be charged extra and need to be paid to the concerned authorities as per actuals.</li>
+                <li>• For driving between 09:45 PM to 06:00 AM on any of the nights, an additional allowance will be applicable and is to be paid to the driver.</li>
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
     </div>

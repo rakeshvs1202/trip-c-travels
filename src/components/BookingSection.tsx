@@ -8,7 +8,6 @@ import "react-datepicker/dist/react-datepicker.css";
 import "../styles/datepicker.css";
 import { useLoadScript, Autocomplete } from "@react-google-maps/api";
 import { useRouter } from "next/navigation";
-import { useBooking } from "@/app/providers";
 
 interface Place {
   place_id: string;
@@ -18,8 +17,7 @@ interface Place {
 
 export default function BookingSection() {
   const router = useRouter();
-  const { setBookingData } = useBooking();
-  const [tripType, setTripType] = useState("ONE_WAY");
+  const [tripType, setTripType] = useState("OUTSTATION");
   const [fromCity, setFromCity] = useState("");
   const [toCity, setToCity] = useState("");
   const [pickupDate, setPickupDate] = useState<Date | null>(null);
@@ -46,6 +44,7 @@ export default function BookingSection() {
     pickupDate?: string
     returnDate?: string
     pickupTime?: string
+    pickupAddress?: string
   }>({})
 
   // Add route cache
@@ -241,9 +240,9 @@ export default function BookingSection() {
       case 'pickupDate':
         return !value ? 'Pickup date is required' : ''
       case 'returnDate':
-        if (tripType === 'ROUND_TRIP') {
+        if (tripType === 'outstation') {
           if (!value) {
-            return 'Return date is required for round trip'
+            return 'Return date is required for outstation trip'
           }
           if (value && pickupDate && new Date(value).getTime() < new Date(pickupDate).getTime()) {
             return 'Return date must be after pickup date'
@@ -252,6 +251,8 @@ export default function BookingSection() {
         return ''
       case 'pickupTime':
         return !value ? 'Pickup time is required' : ''
+      case 'pickupAddress':
+        return !value ? 'Pickup address is required' : ''
       default:
         return ''
     }
@@ -259,42 +260,65 @@ export default function BookingSection() {
 
   // Validate all fields
   const validateForm = () => {
+    if (tripType === 'LOCAL') {
+      const newErrors = {
+        fromCity: validateField('fromCity', fromCity),
+        pickupDate: validateField('pickupDate', pickupDate),
+        pickupTime: validateField('pickupTime', pickupTime),
+        toCity: '',
+        returnDate: '',
+        pickupAddress: ''
+      }
+      setErrors(newErrors)
+      return !newErrors.fromCity && !newErrors.pickupDate && !newErrors.pickupTime
+    } else if (tripType === 'AIRPORT') {
+      const newErrors = {
+        pickupAddress: validateField('pickupAddress', fromCity),
+        fromCity: validateField('fromCity', toCity),
+        toCity: validateField('toCity', fromCity),
+        pickupDate: validateField('pickupDate', pickupDate),
+        pickupTime: validateField('pickupTime', pickupTime),
+      }
+      setErrors(newErrors)
+      return !newErrors.pickupAddress && !newErrors.fromCity && !newErrors.toCity && 
+             !newErrors.pickupDate && !newErrors.pickupTime
+    }
+    
+    // Default validation for other trip types
     const newErrors = {
       fromCity: validateField('fromCity', fromCity),
       toCity: validateField('toCity', toCity),
       pickupDate: validateField('pickupDate', pickupDate),
       returnDate: validateField('returnDate', returnDate),
       pickupTime: validateField('pickupTime', pickupTime),
+      pickupAddress: ''
     }
-
     setErrors(newErrors)
     return !Object.values(newErrors).some(error => error)
   }
 
-  const handleExploreCabs = async () => {
-    if (!validateForm()) {
-      return
-    }
-
-    // Convert trip type to match the expected format in BookingData
-    const normalizedTripType = tripType.toLowerCase().replace("_", "") as "oneWay" | "roundTrip" | "airport" | "local"
+  const handleExploreCabs = useCallback(() => {
+    if (!validateForm()) return
 
     try {
-      // Get route details only when user clicks explore cabs
-      await calculateRouteDetails()
+      // Get route details only when needed (not for local trips)
+      if (tripType !== 'local') {
+        calculateRouteDetails()
+      }
 
-      // Set booking data in context
-      setBookingData({
-        tripType: normalizedTripType,
-        source: fromCity,
-        destination: toCity,
+      // Set booking data in session storage
+      const bookingData = {
+        tripType: tripType as 'local' | 'outstation' | 'airport',
+        source: fromCity!,
+        destination: tripType === 'local' ? fromCity! : toCity!,
         pickupDate: pickupDate!,
-        pickupTime: pickupTime,
-        distance: parseFloat(routeDetails?.distance?.replace(/[^0-9.]/g, '') || "0"),
-        duration: parseInt(routeDetails?.duration?.replace(/[^0-9]/g, '') || "0"),
+        pickupTime: pickupTime!,
+        distance: tripType === 'local' ? 0 : parseFloat(routeDetails?.distance?.replace(/[^0-9.]/g, '') || "0"),
+        duration: tripType === 'local' ? 0 : parseInt(routeDetails?.duration?.replace(/[^0-9]/g, '') || "0"),
         returnDate: returnDate || undefined,
         returnTime: undefined
-      })
+      }
+      sessionStorage.setItem('bookingData', JSON.stringify(bookingData));
 
       // Navigate to select-car page
       router.push("/select-car")
@@ -302,7 +326,7 @@ export default function BookingSection() {
       console.error("Error processing booking:", error)
       setErrors({ fromCity: "There was an error processing your request. Please try again." })
     }
-  }
+  }, [tripType, fromCity, toCity, pickupDate, pickupTime, returnDate, routeDetails, router]);
 
   // Helper component for error message
   const ErrorMessage = ({ message }: { message: string }) => (
@@ -319,7 +343,7 @@ export default function BookingSection() {
       <div className="container mx-auto px-4">
         <div className="max-w-7xl mx-auto bg-white rounded-lg shadow-xl p-6">
           <div className="flex gap-0 mb-6 bg-gray-100 rounded-lg p-1">
-            {["ONE_WAY", "ROUND_TRIP", "LOCAL", "AIRPORT"].map((type) => (
+            {["OUTSTATION", "LOCAL", "AIRPORT"].map((type) => (
               <button
                 key={type}
                 className={`flex-1 px-4 py-2.5 text-sm font-medium rounded-md transition-colors ${
@@ -628,12 +652,6 @@ export default function BookingSection() {
                         />
                       </Autocomplete>
                     )}
-                    <button
-                      onClick={swapCities}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    >
-                      <ArrowLeftRight size={20} />
-                    </button>
                     <ErrorMessage message={errors.toCity || ''} />
                   </div>
                 </div>
@@ -665,7 +683,7 @@ export default function BookingSection() {
                   </div>
                 </div>
 
-                {tripType === "ROUND_TRIP" && (
+                {tripType === "OUTSTATION" && (
                   <div className="lg:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       RETURN DATE
@@ -696,7 +714,7 @@ export default function BookingSection() {
 
                 <div
                   className={`${
-                    tripType === "ROUND_TRIP"
+                    tripType === "OUTSTATION"
                       ? "lg:col-span-2"
                       : "lg:col-span-4"
                   }`}

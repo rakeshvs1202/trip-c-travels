@@ -3,65 +3,51 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
-import { useBooking } from "@/app/providers"
-import { Check, Info, MapPin, Calendar, Clock, ArrowRight } from "lucide-react"
-import { calculatePrice } from "@/lib/priceCalculator"
 import { CarData } from "@/types"
 import { carData } from "@/scripts/seed-data"
 
-interface Car {
-  id: number;
-  category: string;
-  name: string;
-  image: string;
-  seatingCapacity: number;
-  luggageCapacity: number;
-  features: string[];
-  localRates: {
-    hourly: Array<{
-      duration: string;
-      kms: number;
-      price: number;
-    }>;
-  };
-  outstationRates: {
-    perKm: number;
-    minBillableKm: number;
-    driverAllowance: number;
-  };
-}
 
 export default function SelectCar() {
   const router = useRouter()
-  const { bookingData, setBookingData } = useBooking()
+  const [bookingData, setBookingData] = useState<any>(null)
   const [cars, setCars] = useState<CarData[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedCar, setSelectedCar] = useState<number | null>(null)
+  const [selectedCar, setSelectedCar] = useState<CarData | null>(null)
+  const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [bookingPrice, setBookingPrice] = useState<number>(0);
+
+  const localOptions = [
+    { duration: "1hrs", kms: 10 },
+    { duration: "4hrs", kms: 40 },
+    { duration: "8hrs", kms: 80 }
+  ];
 
   useEffect(() => {
-    // Redirect if no booking data
-    if (!bookingData.source || !bookingData.destination) {
-      router.push("/")
-      return
+    // Get booking data from sessionStorage
+    const storedData = sessionStorage.getItem('bookingData');
+    if (storedData) {
+      const parsedData = JSON.parse(storedData);
+      // Convert string dates back to Date objects
+      if (parsedData.pickupDate) {
+        parsedData.pickupDate = new Date(parsedData.pickupDate);
+      }
+      if (parsedData.returnDate) {
+        parsedData.returnDate = new Date(parsedData.returnDate);
+      }
+      setBookingData(parsedData);
+
+      // Set default selected option for LOCAL trips
+      if (parsedData.tripType === 'LOCAL') {
+        setSelectedOption('4hrs | 40kms');
+      }
+    } else {
+      router.push('/');
     }
 
     // Use the car data from seed-data
-    setCars(carData)
+    setCars(carData as CarData[])
     setLoading(false)
-  }, [bookingData, router])
-
-  const handleCarSelect = (carId: number) => {
-    setSelectedCar(carId)
-    setBookingData({ ...bookingData, selectedCar: carId })
-  }
-
-  const handleContinue = () => {
-    if (selectedCar) {
-      router.push("/payment")
-    } else {
-      alert("Please select a car to continue")
-    }
-  }
+  }, [router])
 
   const calculatePrice = (car: CarData) => {
     if (!bookingData) return 0;
@@ -70,16 +56,7 @@ export default function SelectCar() {
     let totalPrice = 0;
 
     switch (tripType) {
-      case "oneWay":
-        // For one-way trips, use outstation rates
-        totalPrice = Math.max(
-          car.outstationRates.minBillableKm,
-          distance
-        ) * car.outstationRates.perKm + car.outstationRates.driverAllowance;
-        break;
-
-      case "roundTrip":
-        // For round trips, double the distance and use outstation rates
+      case "outstation":
         totalPrice = Math.max(
           car.outstationRates.minBillableKm,
           distance * 2
@@ -87,29 +64,64 @@ export default function SelectCar() {
         break;
 
       case "airport":
-        // For airport transfers, use outstation rates with minimum billable km
         totalPrice = Math.max(
           car.outstationRates.minBillableKm,
           distance
         ) * car.outstationRates.perKm + car.outstationRates.driverAllowance;
         break;
 
-      case "local":
-        // For local trips, use the 8-hour package as default
-        const package8hrs = car.localRates.hourly.find(
-          (rate) => rate.duration === "8hrs"
-        );
-        if (package8hrs) {
-          totalPrice = package8hrs.price;
+      case "LOCAL":
+        if (!selectedOption || !selectedOption.includes('|')) {
+          console.error('Invalid selectedOption format:', selectedOption);
+          totalPrice = 0;
+          break;
         }
+        const [minutesPart, kmPart] = selectedOption.split('|');
+        const minutes = parseInt(minutesPart?.trim(), 10);
+        const km = parseInt(kmPart?.trim(), 10);
+        if (isNaN(minutes) || isNaN(km)) {
+          console.error('Invalid number conversion:', { minutes, km });
+          totalPrice = 0;
+          break;
+        }
+        totalPrice = car.localRates.price[0].perKm * km + car.localRates.price[0].perMinute * minutes * 60;
         break;
 
       default:
         totalPrice = 0;
     }
-
     return Math.round(totalPrice);
   };
+
+  useEffect(() => {
+    if (selectedCar) {
+      const price = calculatePrice(selectedCar);
+      setBookingPrice(price);
+    }
+  }, [selectedCar, bookingData, selectedOption]);
+
+  const handleCarSelect = (car: CarData) => {
+    setSelectedCar(car);
+    const price = calculatePrice(car);
+    const updatedData = { 
+      ...bookingData, 
+      selectedCar: car,
+      totalFare: price
+    };
+    sessionStorage.setItem('bookingData', JSON.stringify(updatedData));
+    sessionStorage.setItem("bookingFare", price.toString());
+    setBookingData(updatedData);
+    router.push('/services');
+  };
+
+  const filteredCars = bookingData?.tripType === 'LOCAL' && selectedOption
+    ? cars.filter(car =>
+      car.localRates.hourly.some(rate =>
+        rate.duration === selectedOption.split('|')[0].trim() &&
+        rate.kms === parseInt(selectedOption.split('|')[1].trim().replace('kms', ''))
+      )
+    )
+    : cars;
 
   if (loading) {
     return (
@@ -120,40 +132,73 @@ export default function SelectCar() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4">
       {/* Journey Details Section */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-        <h2 className="text-2xl font-semibold mb-4">Journey Details</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div>
-            <p className="text-gray-600">From</p>
-            <p className="font-medium">{bookingData?.source}</p>
-          </div>
-          <div>
-            <p className="text-gray-600">To</p>
-            <p className="font-medium">{bookingData?.destination}</p>
-          </div>
-          <div>
-            <p className="text-gray-600">Pickup Date & Time</p>
-            <p className="font-medium">
-              {bookingData?.pickupDate?.toLocaleDateString()} at{" "}
-              {bookingData?.pickupTime}
-            </p>
-          </div>
-          {bookingData?.returnDate && (
+        <h2 className="text-2xl font-semibold mb-4 text-center">Journey Details</h2>
+        {bookingData?.tripType !== 'LOCAL' ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 justify-center mx-auto w-full max-w-4xl">
             <div>
-              <p className="text-gray-600">Return Date</p>
+              <p className="text-gray-600">From</p>
+              <p className="font-medium">{bookingData?.source}</p>
+            </div>
+            <div>
+              <p className="text-gray-600">To</p>
+              <p className="font-medium">{bookingData?.destination}</p>
+            </div>
+            <div>
+              <p className="text-gray-600">Pickup Date & Time</p>
               <p className="font-medium">
-                {bookingData.returnDate.toLocaleDateString()}
+                {bookingData?.pickupDate?.toLocaleDateString()} at{" "}
+                {bookingData?.pickupTime}
               </p>
             </div>
-          )}
-        </div>
+            {bookingData?.returnDate && (
+              <div>
+                <p className="text-gray-600">Return Date</p>
+                <p className="font-medium">
+                  {bookingData.returnDate.toLocaleDateString()}
+                </p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-row gap-6 justify-center">
+            <div>
+              <p className="font-medium">{bookingData?.source.split(',')[0]} <span className="text-gray-600 ml-2">Local</span></p>
+            </div>
+            <div>
+              <p className="font-medium">Pickup Date & Time:- <span className="text-gray-600 ml-2">{bookingData?.pickupDate?.toLocaleDateString()} at{" "}{bookingData?.pickupTime}</span></p>
+            </div>
+            {bookingData?.returnDate && (
+              <div>
+                <p className="text-gray-600">Return Date</p>
+                <p className="font-medium">
+                  {bookingData.returnDate.toLocaleDateString()}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
-
+      {bookingData?.tripType === 'LOCAL' && (
+        <div className="flex gap-4 mb-6 justify-center">
+          {localOptions.map((option) => (
+            <button
+              key={`${option.duration}|${option.kms}`}
+              className={`px-4 py-2 rounded-md ${selectedOption === `${option.duration} | ${option.kms}kms`
+                ? 'bg-[#FF3131] text-white'
+                : 'bg-gray-200 text-gray-800'}`}
+              onClick={() => setSelectedOption(`${option.duration} | ${option.kms}kms`)}
+            >
+              {option.duration} | {option.kms}kms
+            </button>
+          ))}
+        </div>
+      )}
       {/* Cars Grid */}
       <div className="grid grid-cols-1 gap-6">
-        {cars.map((car) => (
+        {filteredCars.map((car) => (
           <div
             key={car.id}
             className="bg-white rounded-lg shadow-md p-6 flex flex-col md:flex-row items-center gap-6"
@@ -204,7 +249,7 @@ export default function SelectCar() {
                   ₹{calculatePrice(car)}
                 </p>
                 <button
-                  onClick={() => handleCarSelect(car.id)}
+                  onClick={() => handleCarSelect(car)}
                   className="w-full mt-4 px-6 py-2 bg-[#FF3131] text-white font-medium rounded hover:bg-[#E02020] transition-colors"
                 >
                   Select
@@ -215,19 +260,6 @@ export default function SelectCar() {
         ))}
       </div>
 
-      {/* Continue Button */}
-      {selectedCar && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white shadow-lg p-4">
-          <div className="container mx-auto px-4">
-            <button
-              onClick={handleContinue}
-              className="w-full md:w-auto float-right bg-primary text-white px-8 py-3 rounded-lg font-medium hover:bg-primary-dark transition-colors"
-            >
-              Continue to Payment
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

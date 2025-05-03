@@ -8,7 +8,7 @@ export interface IBooking extends Document {
   pickupAddress: string;
   pickupDate: Date;
   pickupTime: string;
-  tripType: 'oneWay' | 'roundTrip' | 'local' | 'airport';
+  tripType: 'outstation' | 'local' | 'airport';
   source: string;
   destination: string;
   carId: number;
@@ -28,7 +28,7 @@ const BookingSchema: Schema = new Schema({
   pickupAddress: { type: String, required: true },
   pickupDate: { type: Date, required: true },
   pickupTime: { type: String, required: true },
-  tripType: { type: String, enum: ['oneWay', 'roundTrip', 'local', 'airport'], required: true },
+  tripType: { type: String, enum: ['outstation', 'local', 'airport'], required: true },
   source: { type: String, required: true },
   destination: { type: String, required: true },
   carId: { type: Number, required: true },

@@ -3,7 +3,6 @@ import mongoose from 'mongoose';
 const hourlyRateSchema = new mongoose.Schema({
   duration: String,
   kms: Number,
-  price: Number,
 });
 
 const localRatesSchema = new mongoose.Schema({

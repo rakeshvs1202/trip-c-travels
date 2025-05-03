@@ -5,16 +5,10 @@ import Image from "next/image"
 export default function ServicesSection() {
   const services = [
     {
-      title: "ROUNDTRIP CABS",
+      title: "OUTSTATION_TRIPS",
       description: "Our commitment to delivering a stress-free roundtrip experience will pamper you with absolutely comfortable travel from your doorstep to back. Our chauffeurs are not only courteous but are also expert travel companions that will make your road travel memorable.",
       image: "/roundTripImg.png",
       icon: <RotateCw className="w-6 h-6" />
-    },
-    {
-      title: "ONEWAY DROPS",
-      description: "Our network of over 15 lakh one way routes ensures that there is no corner of the country that you can't travel with us. Pay only one side charge at rock bottom rates. If you need to be somewhere, we'll get you there.",
-      image: "/onewayTrip.png",
-      icon: <Car className="w-6 h-6" />
     },
     {
       title: "LOCAL RENTALS",
@@ -38,7 +32,7 @@ export default function ServicesSection() {
           <div className="w-24 h-1 bg-[#FF3131] mx-auto"></div>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {services.map((service, index) => (
             <div 
               key={index} 
