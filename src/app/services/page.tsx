@@ -1,9 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { useLoadScript, Autocomplete } from "@react-google-maps/api"
 import { useBooking } from "@/app/providers"
+import { v4 as uuidv4 } from 'uuid';
+import { debounce } from "lodash"
 
 export default function ContactDetails() {
   const router = useRouter()
@@ -12,10 +14,11 @@ export default function ContactDetails() {
     name: "",
     email: "",
     mobile: "",
-    pickup: ""
+    pickupAddress:""
   })
   const [bookingDetails, setBookingDetails] = useState<any>(null)
-
+const [pickupAddressAutocomplete, setPickupAddressAutocomplete] =
+    useState<google.maps.places.Autocomplete | null>(null);
   const { isLoaded } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
     libraries: ["places"]
@@ -43,12 +46,70 @@ export default function ContactDetails() {
       [e.target.name]: e.target.value
     })
   }
+  const debouncedFromInput = useCallback(
+    debounce((value: string) => {
+      setFormData({...formData, pickupAddress:  value });
+    }, 300),
+    []
+  );
+  const handleAddressInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    debouncedFromInput(value);
+  };
+  const handlePickupAddressAutocompleteLoad = (
+    autocomplete: google.maps.places.Autocomplete
+  ) => {
+    setPickupAddressAutocomplete(autocomplete);
+  };
+  const handlePlaceSelect = async (type: "pickup") => {
+    const autocomplete = pickupAddressAutocomplete;
+    if (!autocomplete) return;
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    // Handle form submission
-    console.log(formData)
-    // Navigate to next page or process booking
+    const place = autocomplete.getPlace();
+    if (place.formatted_address) {
+        setFormData({...formData, pickupAddress:  place.formatted_address });
+    }
+  };
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+      const bookingId = uuidv4();
+      const bookingInfo: any = {
+        bookingId,
+        contactInfo: {
+          name: formData.name,
+          email: formData.email,
+          phone: formData.mobile
+        },
+        pickupDetails: {
+          pickupAddress: formData.pickupAddress,
+          pickupDate: bookingDetails.pickupDate,
+          pickupTime: bookingDetails.pickupTime
+        },
+        bookingData: {
+          source: bookingDetails.source,
+          destination: bookingDetails?.destination,
+          tripType: bookingDetails.tripType,
+          distance: bookingDetails.distance,
+          duration: bookingDetails.duration,
+          returnDate: bookingDetails?.returnDate,
+          selectedPackage: bookingDetails?.selectedPackage,
+          totalFare: bookingDetails.totalFare,
+          selectedCar: bookingDetails.selectedCar?.name,
+        }
+      };
+      const response = await fetch('/api/bookings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(bookingInfo)
+      });
+
+      if (!response.ok) throw new Error('Failed to save booking');
+      router.push(`/payment/${bookingId}`);
+    } catch (error) {
+      console.error('Booking error:', error);
+    }
   }
 
   return (
@@ -84,7 +145,7 @@ export default function ContactDetails() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Mobile</label>
                 <input
-                  type="tel"
+                  type="number"
                   name="mobile"
                   value={formData.mobile}
                   onChange={handleInputChange}
@@ -96,18 +157,16 @@ export default function ContactDetails() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Pickup Location</label>
                 {isLoaded && (
                   <Autocomplete
-                    onLoad={(autocomplete) => {
-                      console.log("Autocomplete loaded:", autocomplete)
-                    }}
+                    onLoad={handlePickupAddressAutocompleteLoad}
                     onPlaceChanged={() => {
-                      // Handle place selection
+                      handlePlaceSelect("pickup")
                     }}
                   >
                     <input
                       type="text"
-                      name="pickup"
-                      value={formData.pickup}
-                      onChange={handleInputChange}
+                      name="pickupAddress"
+                      defaultValue={formData.pickupAddress || ''}
+                      onChange={handleAddressInputChange}
                       className="w-full p-2 border rounded-md"
                       placeholder="Enter pickup location"
                       required
@@ -117,9 +176,9 @@ export default function ContactDetails() {
               </div>
               <button
                 type="submit"
-                className="w-full bg-primary text-white py-2 rounded-md hover:bg-primary-dark"
+                className="w-full bg-[#FF3131] text-white py-2 rounded-md hover:bg-primary-dark"
               >
-                Proceed
+                Proceed To Payment
               </button>
             </form>
           </div>
@@ -135,7 +194,7 @@ export default function ContactDetails() {
                     <span className="font-medium">{bookingDetails.source}</span>
                   </div>
                   {
-                    bookingDetails.destination && (<div className="flex justify-between">
+                    (bookingDetails.destination && bookingDetails.tripType === "OUTSTATION") && (<div className="flex justify-between">
                       <span className="text-gray-600">Drop City</span>
                       <span className="font-medium">{bookingDetails.destination}</span>
                     </div>)
@@ -148,7 +207,7 @@ export default function ContactDetails() {
                           day: 'numeric',
                           month: 'long',
                           year: 'numeric'
-                        }).replace(/(\d+)/, (_:any, day:any) => {
+                        }).replace(/(\d+)/, (_: any, day: any) => {
                           const numericDay = parseInt(day)
                           return `${numericDay}${getOrdinalSuffix(numericDay)}`
                         })
@@ -157,21 +216,25 @@ export default function ContactDetails() {
                   </div>
                   {bookingDetails?.returnDate && (
                     <div className="flex justify-between">
-                    <span className="text-gray-600">Return Date</span>
-                    <span className="font-medium">
-                      {bookingDetails.returnDate && (
-                        new Date(bookingDetails.returnDate).toLocaleDateString("en-IN", {
-                          day: 'numeric',
-                          month: 'long',
-                          year: 'numeric'
-                        }).replace(/(\d+)/, (_:any, day:any) => {
-                          const numericDay = parseInt(day)
-                          return `${numericDay}${getOrdinalSuffix(numericDay)}`
-                        })
-                      )}
-                    </span>
-                  </div>
+                      <span className="text-gray-600">Return Date</span>
+                      <span className="font-medium">
+                        {bookingDetails.returnDate && (
+                          new Date(bookingDetails.returnDate).toLocaleDateString("en-IN", {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric'
+                          }).replace(/(\d+)/, (_: any, day: any) => {
+                            const numericDay = parseInt(day)
+                            return `${numericDay}${getOrdinalSuffix(numericDay)}`
+                          })
+                        )}
+                      </span>
+                    </div>
                   )}
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Trip Type</span>
+                    <span className="font-medium">{bookingDetails?.tripType.charAt(0).toUpperCase() + bookingDetails?.tripType.slice(1).toLowerCase()}</span>
+                  </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Car Type</span>
                     <span className="font-medium">{bookingDetails.selectedCar?.name}</span>

@@ -49,7 +49,7 @@ export default function SelectCar() {
     setLoading(false)
   }, [router])
 
-  const calculatePrice = (car: CarData) => {
+  const calculatePrice = (car: any) => {
     if (!bookingData) return 0;
 
     const { distance, tripType } = bookingData;
@@ -84,7 +84,7 @@ export default function SelectCar() {
           totalPrice = 0;
           break;
         }
-        totalPrice = car.localRates.price[0].perKm * km + car.localRates.price[0].perMinute * minutes * 60;
+        totalPrice = car?.localRates?.price[0]?.perKm * km + car.localRates.price[0].perMinute * minutes * 60;
         break;
 
       default:
@@ -106,7 +106,8 @@ export default function SelectCar() {
     const updatedData = { 
       ...bookingData, 
       selectedCar: car,
-      totalFare: price
+      totalFare: price,
+      selectedPackage : bookingData?.tripType === 'LOCAL' ? selectedOption: null,
     };
     sessionStorage.setItem('bookingData', JSON.stringify(updatedData));
     sessionStorage.setItem("bookingFare", price.toString());

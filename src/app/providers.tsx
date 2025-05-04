@@ -1,15 +1,14 @@
 "use client"
 
 import { createContext, useState, useContext, type ReactNode } from "react"
-import { BookingData } from "@/types"
 
 type BookingContextType = {
-  bookingData: BookingData
-  setBookingData: (data: Partial<BookingData>) => void
+  bookingData: any
+  setBookingData: (data: Partial<any>) => void
   resetBookingData: () => void
 }
 
-const defaultBookingData: BookingData = {
+const defaultBookingData: any = {
   tripType: "outstation",
   source: "",
   destination: "",
@@ -22,10 +21,10 @@ const defaultBookingData: BookingData = {
 const BookingContext = createContext<BookingContextType | undefined>(undefined)
 
 export function Providers({ children }: { children: ReactNode }) {
-  const [bookingData, setBookingDataState] = useState<BookingData>(defaultBookingData)
+  const [bookingData, setBookingDataState] = useState<any>(defaultBookingData)
 
-  const setBookingData = (data: Partial<BookingData>) => {
-    setBookingDataState((prev) => ({ ...prev, ...data }))
+  const setBookingData = (data: Partial<any>) => {
+    setBookingDataState((prev:any) => ({ ...prev, ...data }))
   }
 
   const resetBookingData = () => {

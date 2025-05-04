@@ -308,7 +308,7 @@ export default function BookingSection() {
       const bookingData = {
         tripType: tripType as 'LOCAL' | 'OUTSTATION' | 'AIRPORT',
         source: fromCity!,
-        destination: tripType === 'LOCAL' ? fromCity! : toCity!,
+        destination: tripType === 'LOCAL' ? '' : toCity!,
         pickupDate: pickupDate!,
         pickupTime: pickupTime!,
         distance: tripType === 'LOCAL' ? 0 :parseFloat(currentDetails?.distance?.replace(/[^0-9.]/g, '') || "0"),

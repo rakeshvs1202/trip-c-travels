@@ -1,43 +1,30 @@
-import mongoose, { Schema, Document } from 'mongoose';
+// src/models/Booking.ts
+import mongoose from "mongoose";
 
-export interface IBooking extends Document {
-  bookingId: string;
-  customerName: string;
-  customerEmail: string;
-  customerPhone: string;
-  pickupAddress: string;
-  pickupDate: Date;
-  pickupTime: string;
-  tripType: 'outstation' | 'local' | 'airport';
-  source: string;
-  destination: string;
-  carId: number;
-  distance: number;
-  duration: number;
-  totalAmount: number;
-  paymentStatus: 'pending' | 'completed' | 'failed';
-  paymentId?: string;
-  createdAt: Date;
-}
-
-const BookingSchema: Schema = new Schema({
+const BookingSchema = new mongoose.Schema({
   bookingId: { type: String, required: true, unique: true },
-  customerName: { type: String, required: true },
-  customerEmail: { type: String, required: true },
-  customerPhone: { type: String, required: true },
-  pickupAddress: { type: String, required: true },
-  pickupDate: { type: Date, required: true },
-  pickupTime: { type: String, required: true },
-  tripType: { type: String, enum: ['outstation', 'local', 'airport'], required: true },
-  source: { type: String, required: true },
-  destination: { type: String, required: true },
-  carId: { type: Number, required: true },
-  distance: { type: Number, required: true },
-  duration: { type: Number, required: true },
-  totalAmount: { type: Number, required: true },
-  paymentStatus: { type: String, enum: ['pending', 'completed', 'failed'], default: 'pending' },
-  paymentId: { type: String },
+  contactInfo: {
+    name: { type: String, required: true },
+    email: { type: String, required: true },
+    phone: { type: String, required: true }
+  },
+  pickupDetails: {
+    pickupAddress: { type: String, required: false },
+    pickupDate: { type: String , required: false },
+    pickupTime: { type: String, required: false }
+  },
+  bookingData: { 
+    source: { type: String, required: true },
+    destination: { type: String, required: false },
+    tripType: { type: String, required: true },
+    distance: { type: String, required: true },
+    duration: { type: String, required: true },
+    returnDate: { type: String, required: false },
+    selectedPackage: { type: String, required: false },
+    totalFare: { type: Number, required: true },
+    selectedCar: { type: String, required: true },
+   },
   createdAt: { type: Date, default: Date.now }
 });
 
-export default mongoose.models.Booking || mongoose.model<IBooking>('Booking', BookingSchema);
+export default mongoose.models.Booking || mongoose.model("Booking", BookingSchema);
