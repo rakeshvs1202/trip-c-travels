@@ -17,6 +17,7 @@ export default function ContactDetails() {
     pickupAddress:""
   })
   const [bookingDetails, setBookingDetails] = useState<any>(null)
+  const [activeTab, setActiveTab] = useState('inclusions');
 const [pickupAddressAutocomplete, setPickupAddressAutocomplete] =
     useState<google.maps.places.Autocomplete | null>(null);
   const { isLoaded } = useLoadScript({
@@ -233,7 +234,7 @@ const [pickupAddressAutocomplete, setPickupAddressAutocomplete] =
                   )}
                   <div className="flex justify-between">
                     <span className="text-gray-600">Trip Type</span>
-                    <span className="font-medium">{bookingDetails?.tripType.charAt(0).toUpperCase() + bookingDetails?.tripType.slice(1).toLowerCase()}</span>
+                    {bookingDetails?.tripType === "LOCAL" ? <span className="font-medium">{bookingDetails?.tripType.charAt(0).toUpperCase() + bookingDetails?.tripType.slice(1).toLowerCase() + "  ( " + bookingDetails?.selectedPackage + " )"}</span> : <span className="font-medium">{bookingDetails?.tripType.charAt(0).toUpperCase() + bookingDetails?.tripType.slice(1).toLowerCase()}</span>}
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Car Type</span>
@@ -248,44 +249,97 @@ const [pickupAddressAutocomplete, setPickupAddressAutocomplete] =
             </div>
 
             {/* Inclusions */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-lg font-semibold mb-4">Inclusions</h3>
-              <ul className="space-y-3">
-                <li className="flex items-center gap-2">
-                  <span className="w-6 h-6 flex items-center justify-center rounded-full border">🚗</span>
-                  Pay ₹12/km after 80 km
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="w-6 h-6 flex items-center justify-center rounded-full border">⏰</span>
-                  Pay ₹144/hr after 8 hours
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="w-6 h-6 flex items-center justify-center rounded-full border">🌙</span>
-                  Night Allowance
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="w-6 h-6 flex items-center justify-center rounded-full border">🛣️</span>
-                  Toll / State tax
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="w-6 h-6 flex items-center justify-center rounded-full border">🅿️</span>
-                  Parking
-                </li>
-              </ul>
-            </div>
+            <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
+              <div className="flex w-full">
+                <button 
+                  onClick={() => setActiveTab('inclusions')}
+                  className={`flex-1 py-3 px-4 text-center font-medium transition-colors ${
+                    activeTab === 'inclusions' 
+                      ? 'bg-[#FF3131] text-white' 
+                      : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                  }`}
+                >
+                  Inclusions
+                </button>
+                <button 
+                  onClick={() => setActiveTab('exclusions')}
+                  className={`flex-1 py-3 px-4 text-center font-medium transition-colors ${
+                    activeTab === 'exclusions' 
+                      ? 'bg-[#FF3131] text-white' 
+                      : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                  }`}
+                >
+                  Exclusions
+                </button>
+                <button 
+                  onClick={() => setActiveTab('terms')}
+                  className={`flex-1 py-3 px-4 text-center font-medium transition-colors ${
+                    activeTab === 'terms' 
+                      ? 'bg-[#FF3131] text-white' 
+                      : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                  }`}
+                >
+                  T&C
+                </button>
+              </div>
 
-            {/* T&C */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-lg font-semibold mb-4">Terms & Conditions</h3>
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li>• Your Trip has a KM limit as well as an Hours limit. If your usage exceeds these limits, you will be charged for the excess KM and/or hours used.</li>
-                <li>• The KM and Hour(s) usage will be calculated starting from your pick-up point and back to the pick-up point.</li>
-                <li>• The Airport entry charge, if applicable, is not included in the fare and will be charged extra.</li>
-                <li>• All road toll fees, parking charges, state taxes etc. if applicable will be charged extra and need to be paid to the concerned authorities as per actuals.</li>
-                <li>• For driving between 09:45 PM to 06:00 AM on any of the nights, an additional allowance will be applicable and is to be paid to the driver.</li>
-              </ul>
+              {activeTab === 'inclusions' && (
+                <div className="p-6">
+                  <ul className="space-y-3">
+                    <li className="flex items-center gap-2">
+                      <span className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 bg-gray-50 text-gray-600">🚗</span>
+                      <span>Base Fare and Fuel Charges</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 bg-gray-50 text-gray-600">👨‍✈️</span>
+                      <span>Driver Allowance</span>
+                    </li>
+                  </ul>
+                </div>
+              )}
+              
+              {activeTab === 'exclusions' && (
+                <div className="p-6">
+                  <ul className="space-y-3">
+                    {(bookingDetails?.tripType === 'LOCAL') && (<li className="flex items-center gap-2">
+                      <span className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 bg-gray-50 text-gray-600">💸</span>
+                      <span>Pay ₹{bookingDetails?.selectedCar?.localRates?.price[1]?.exKmRate}/km after limits</span>
+                    </li>)}
+                    {(bookingDetails?.tripType === 'LOCAL') && (<li className="flex items-center gap-2">
+                      <span className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 bg-gray-50 text-gray-600">⏰</span>
+                      <span>Pay ₹{bookingDetails?.selectedCar?.localRates?.price[1]?.exMinRate * 60}/hr after limits</span>
+                    </li>)}
+                    {(bookingDetails?.tripType === 'OUTSTATION') && (<li className="flex items-center gap-2">
+                      <span className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 bg-gray-50 text-gray-600">💸</span>
+                      <span>Pay ₹{bookingDetails?.selectedCar?.outstationRates?.exKmRate}/km after {bookingDetails?.distance}km</span>
+                    </li>)}
+                    <li className="flex items-center gap-2">
+                      <span className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 bg-gray-50 text-gray-600">🛣️</span>
+                      <span>Toll / State tax</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 bg-gray-50 text-gray-600">🅿️</span>
+                      <span>Parking</span>
+                    </li>
+                  </ul>
+                </div>
+              )}
+              
+              {activeTab === 'terms' && (
+                <div className="p-6">
+                  <ul className="space-y-2 text-sm text-gray-600">
+                    <li>• Your Trip has a KM limit as well as an Hours limit. If your usage exceeds these limits, you will be charged for the excess KM and/or hours used.</li>
+                    <li>• The KM and Hour(s) usage will be calculated starting from your pick-up point and back to the pick-up point.</li>
+                    <li>• The Airport entry charge, if applicable, is not included in the fare and will be charged extra.</li>
+                    <li>• All road toll fees, parking charges, state taxes etc. if applicable will be charged extra and need to be paid to the concerned authorities as per actuals.</li>
+                    <li>• For driving between 09:45 PM to 06:00 AM on any of the nights, an additional allowance will be applicable and is to be paid to the driver.</li>
+                  </ul>
+                </div>
+              )}
             </div>
+            
           </div>
+            
         </div>
       </div>
     </div>

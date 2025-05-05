@@ -13,8 +13,10 @@ export default function SelectCar() {
   const [cars, setCars] = useState<CarData[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedCar, setSelectedCar] = useState<CarData | null>(null)
-  const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [selectedOption, setSelectedOption] = useState<any>(null);
   const [bookingPrice, setBookingPrice] = useState<number>(0);
+  const [showDetailsForCar, setShowDetailsForCar] = useState<CarData | null>(null);
+  const [activeTab, setActiveTab] = useState('inclusions');
 
   const localOptions = [
     { duration: "1hrs", kms: 10 },
@@ -123,6 +125,78 @@ export default function SelectCar() {
       )
     )
     : cars;
+
+  const DetailsModal = ({ car }: { car: any }) => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg max-w-2xl w-full p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-xl font-semibold">Package Details</h3>
+          <button
+            onClick={() => setShowDetailsForCar(null)}
+            className="text-gray-500 hover:text-gray-700"
+          >
+            ✕
+          </button>
+        </div>
+        
+        {/* Tabs */}
+        <div className="border-b border-gray-200 mb-4">
+          <div className="flex gap-6">
+            {['inclusions', 'exclusions', 'terms'].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`pb-2 px-1 ${
+                  activeTab === tab
+                    ? 'border-b-2 border-[#FF3131] font-medium'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Tab Content */}
+        <div className="prose max-h-[60vh] overflow-y-auto">
+          {activeTab === 'inclusions' && (
+            <div className="space-y-3">
+              <p className="text-green-600">✅ Base Fare</p>
+
+              <p className="text-green-600">✅ Driver Allowance</p>
+            </div>
+          )}
+
+          {(activeTab === 'exclusions' && bookingData?.tripType === 'LOCAL') && (
+            <div className="space-y-3">
+              <p>❌ Pay ₹{car.localRates.price[1].exKmRate}/km after {parseInt(selectedOption.split('|')[1].trim().replace('kms', ''))}km</p>
+              <p>❌ Pay ₹{car.localRates?.price[1]?.exMinRate * 60}/hr after {parseInt(selectedOption.split('|')[0].trim().replace('hrs', ''))} hours</p>
+              <p>❌ Toll / State tax</p>
+              <p>❌ Parking charges</p>
+            </div>
+          )}
+          {(activeTab === 'exclusions' && bookingData?.tripType === 'OUTSTATION') && (
+            <div className="space-y-3">
+              <p>❌ Pay ₹{car.outstationRates.exKmRate}/km after {bookingData?.distance}km</p>
+              <p>❌ Toll / State tax</p>
+              <p>❌ Parking charges</p>
+            </div>
+          )}
+
+          {activeTab === 'terms' && (
+            <div className="space-y-3 text-sm">
+              <p>⚠️ Your Trip has a KM limit as well as an Hours limit. Excess usage will be charged.</p>
+              <p>⚠️ KM and Hours calculated from pick-up to return.</p>
+              <p>⚠️ Airport entry charges (if applicable) are extra.</p>
+              <p>⚠️ All tolls, parking, and taxes are extra.</p>
+              <p>⚠️ Night driving (9:45 PM - 6:00 AM) incurs additional allowance.</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 
   if (loading) {
     return (
@@ -240,10 +314,20 @@ export default function SelectCar() {
                       {feature}
                     </span>
                   ))}
+                  {bookingData?.tripType ==='LOCAL'&& (<span className="text-gray-600 font-medium"> Includes {parseInt(selectedOption.split('|')[1].trim().replace('kms', ''))} kms and {parseInt(selectedOption.split('|')[0].trim().replace('hrs', ''))} hours</span>)}
+                  <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowDetailsForCar(car);
+                  }}
+                  className="text-[#FF3131] hover:underline text-base font-bold cursor-pointer px-2"
+                >
+                More Details
+                </button>
                 </div>
               </div>
             </div>
-            <div className="w-full md:w-1/4 text-center">
+            <div className="w-full md:w-1/6 text-center">
               <div className="bg-gray-50 rounded-lg p-4">
                 <p className="text-gray-600">Total Fare</p>
                 <p className="text-3xl font-bold text-[#FF3131]">
@@ -261,6 +345,7 @@ export default function SelectCar() {
         ))}
       </div>
 
+      {showDetailsForCar && <DetailsModal car={showDetailsForCar} />}
     </div>
   )
 }

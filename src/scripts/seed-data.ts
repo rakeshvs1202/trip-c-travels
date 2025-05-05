@@ -19,7 +19,8 @@ export const carData = [
         ]
       },
       outstationRates: {
-        perKm: 17,
+        perKm: 15,
+        exKmRate:17,
         minBillableKm: 250,
         driverAllowance: 350,
       },
@@ -44,7 +45,8 @@ export const carData = [
         ]
       },
       outstationRates: {
-        perKm: 19,
+        perKm: 17,
+        exKmRate:19,
         minBillableKm: 250,
         driverAllowance: 350,
       },
@@ -69,7 +71,8 @@ export const carData = [
         ]
       },
       outstationRates: {
-        perKm: 22,
+        perKm: 20,
+        exKmRate:22,
         minBillableKm: 250,
         driverAllowance: 400,
       },
@@ -94,7 +97,8 @@ export const carData = [
         ]
       },
       outstationRates: {
-        perKm: 23,
+        perKm: 21,
+        exKmRate:23,
         minBillableKm: 250,
         driverAllowance: 450,
       },
@@ -119,7 +123,8 @@ export const carData = [
         ]
       },
       outstationRates: {
-        perKm: 25,
+        perKm: 23,
+        exKmRate:25,
         minBillableKm: 250,
         driverAllowance: 450,
       },
@@ -145,6 +150,7 @@ export const carData = [
       },
       outstationRates: {
         perKm: 25,
+        exKmRate:27,
         minBillableKm: 250,
         driverAllowance: 450,
       },
@@ -213,7 +219,7 @@ export const carData = [
         ]
       },
       outstationRates: {
-        perKm: 120,
+        perKm: 180,
         minBillableKm: 300,
         driverAllowance: 850,
       },
@@ -243,6 +249,7 @@ export const carData = [
       },
       outstationRates: {
         perKm: 24,
+        exKmRate:26,
         minBillableKm: 250,
         driverAllowance: 500,
       },
@@ -272,6 +279,7 @@ export const carData = [
       },
       outstationRates: {
         perKm: 26,
+        exKmRate:28,
         minBillableKm: 250,
         driverAllowance: 500,
       },
