@@ -15,4 +15,5 @@ export interface CarData {
     minBillableKm: number;
     driverAllowance: number;
   };
+  airportRates: Array<{ range: string; perKmRate: number }>;
 }

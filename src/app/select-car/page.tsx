@@ -66,10 +66,7 @@ export default function SelectCar() {
         break;
 
       case "AIRPORT":
-        totalPrice = Math.max(
-          car.outstationRates.minBillableKm,
-          distance
-        ) * car.outstationRates.perKm + car.outstationRates.driverAllowance;
+        totalPrice = calculateAirportFare(car, distance);
         break;
 
       case "LOCAL":
@@ -93,6 +90,21 @@ export default function SelectCar() {
         totalPrice = 0;
     }
     return Math.round(totalPrice);
+  };
+
+  const calculateAirportFare = (car: CarData, distance: number) => {
+    const rates = car.airportRates
+      ?.map(rate => ({
+        range: parseInt(rate.range),
+        perKmRate: rate.perKmRate
+      }))
+      .sort((a, b) => a.range - b.range);
+
+    if (!rates || rates.length === 0) return 0;
+
+    // Find appropriate rate bracket
+    const applicableRate = rates.find(r => r.range >= distance) || rates[rates.length - 1];
+    return applicableRate.perKmRate * distance;
   };
 
   useEffect(() => {
@@ -124,6 +136,8 @@ export default function SelectCar() {
         rate.kms === parseInt(selectedOption.split('|')[1].trim().replace('kms', ''))
       )
     )
+    : bookingData?.tripType === 'AIRPORT'
+    ? cars.filter(car => car.airportRates && car.airportRates.length > 0)
     : cars;
 
   const DetailsModal = ({ car }: { car: any }) => (
@@ -179,6 +193,12 @@ export default function SelectCar() {
           {(activeTab === 'exclusions' && bookingData?.tripType === 'OUTSTATION') && (
             <div className="space-y-3">
               <p>❌ Pay ₹{car.outstationRates.exKmRate}/km after {bookingData?.distance}km</p>
+              <p>❌ Toll / State tax</p>
+              <p>❌ Parking charges</p>
+            </div>
+          )}
+          {(activeTab === 'exclusions' && bookingData?.tripType === 'AIRPORT') && (
+            <div className="space-y-3">
               <p>❌ Toll / State tax</p>
               <p>❌ Parking charges</p>
             </div>

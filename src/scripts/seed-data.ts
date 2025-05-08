@@ -24,6 +24,16 @@ export const carData = [
         minBillableKm: 250,
         driverAllowance: 350,
       },
+      airportRates: [
+        {range: "25",perKmRate:50},
+        {range: "30",perKmRate:46},
+        {range: "35",perKmRate:42},
+        {range: "40",perKmRate:39},
+        {range: "45",perKmRate:37},
+        {range: "50",perKmRate:36},
+        {range: "55",perKmRate:36},
+        {range: "60",perKmRate:36},
+      ]
     },
     {
       id: 2,
@@ -76,6 +86,16 @@ export const carData = [
         minBillableKm: 250,
         driverAllowance: 400,
       },
+      airportRates: [
+        {range: "25",perKmRate:64},
+        {range: "30",perKmRate:59},
+        {range: "35",perKmRate:55},
+        {range: "40",perKmRate:50},
+        {range: "45",perKmRate:49},
+        {range: "50",perKmRate:50},
+        {range: "55",perKmRate:50},
+        {range: "60",perKmRate:50},
+      ]
     },
     {
       id: 4,
@@ -102,6 +122,16 @@ export const carData = [
         minBillableKm: 250,
         driverAllowance: 450,
       },
+      airportRates: [
+        {range: "25",perKmRate:70},
+        {range: "30",perKmRate:68},
+        {range: "35",perKmRate:66},
+        {range: "40",perKmRate:64},
+        {range: "45",perKmRate:62},
+        {range: "50",perKmRate:61},
+        {range: "55",perKmRate:60},
+        {range: "60",perKmRate:60},
+      ]
     },
     {
       id: 5,
@@ -128,6 +158,16 @@ export const carData = [
         minBillableKm: 250,
         driverAllowance: 450,
       },
+      airportRates: [
+        {range: "25",perKmRate:78},
+        {range: "30",perKmRate:76},
+        {range: "35",perKmRate:74},
+        {range: "40",perKmRate:72},
+        {range: "45",perKmRate:70},
+        {range: "50",perKmRate:68},
+        {range: "55",perKmRate:67},
+        {range: "60",perKmRate:66},
+      ]
     },
     {
       id: 6,

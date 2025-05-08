@@ -18,8 +18,8 @@ interface Place {
 export default function BookingSection() {
   const router = useRouter();
   const [tripType, setTripType] = useState("OUTSTATION");
-  const [fromCity, setFromCity] = useState("");
-  const [toCity, setToCity] = useState("");
+  const [fromCity, setFromCity] = useState<any>(null);
+  const [toCity, setToCity] = useState<any>(null);
   const [pickupDate, setPickupDate] = useState<Date | null>(null);
   const [returnDate, setReturnDate] = useState<Date | null>(null);
   const [pickupTime, setPickupTime] = useState("");
@@ -36,6 +36,8 @@ export default function BookingSection() {
     duration: string;
     tollInfo?: string;
   } | null>(null);
+  const [fromCoords, setFromCoords] = useState<google.maps.LatLngLiteral>();
+  const [toCoords, setToCoords] = useState<google.maps.LatLngLiteral>();
 
   // Add error state
   const [errors, setErrors] = useState<{
@@ -129,61 +131,39 @@ export default function BookingSection() {
     if (!autocomplete) return;
 
     const place = autocomplete.getPlace();
-    if (place.formatted_address) {
+    if (place.name) {
       if (type === "from") {
         setFromCity(place.formatted_address);
+        setFromCoords(place.geometry?.location ? { lat: place.geometry.location.lat(), lng: place.geometry.location.lng() } : undefined);
       } else {
         setToCity(place.formatted_address);
+        setToCoords(place.geometry?.location ? { lat: place.geometry.location.lat(), lng: place.geometry.location.lng() } : undefined);
       }
     }
   };
 
   const calculateRouteDetails = useCallback(
     async () => {
-      if (!fromCity || !toCity || !pickupTime) return;
+      if (!fromCoords || !toCoords) return;
 
-      // Create cache key
-      const cacheKey = `${fromCity}-${toCity}-${pickupTime}`;
+      const service = new google.maps.DistanceMatrixService();
+      const response = await service.getDistanceMatrix({
+        origins: [{ lat: fromCoords.lat, lng: fromCoords.lng }],
+        destinations: [{ lat: toCoords.lat, lng: toCoords.lng }],
+        travelMode: google.maps.TravelMode.DRIVING,
+      });
+
+      const distance = response.rows[0].elements[0].distance.value / 1000;
+      const details = {
+        distance: distance.toString(),
+        duration: response.rows[0].elements[0].duration.text,
+      };
       
-      // Check cache first
-      if (routeCache.current[cacheKey]) {
-        setRouteDetails(routeCache.current[cacheKey]);
-        return;
-      }
-
-      try {
-        const service = new google.maps.DistanceMatrixService();
-        const result = await service.getDistanceMatrix({
-          origins: [fromCity],
-          destinations: [toCity],
-          travelMode: google.maps.TravelMode.DRIVING,
-          drivingOptions: {
-            departureTime: new Date(
-              pickupDate?.setHours(
-                parseInt(pickupTime.split(":")[0]),
-                parseInt(pickupTime.split(":")[1])
-              ) || new Date()
-            ),
-            trafficModel: google.maps.TrafficModel.BEST_GUESS,
-          },
-        });
-
-        if (result.rows[0]?.elements[0]) {
-          const { distance, duration } = result.rows[0].elements[0];
-          const details = {
-            distance: distance.text,
-            duration: duration.text,
-          };
-          
-          // Cache the result
-          routeCache.current[cacheKey] = details;
-          setRouteDetails(details);
-        }
-      } catch (error) {
-        console.error("Error calculating route details:", error);
-      }
+      // Cache the result
+      routeCache.current[`${fromCity}-${toCity}`] = details;
+      setRouteDetails(details);
     },
-    [fromCity, toCity, pickupTime, pickupDate, setRouteDetails]
+    [fromCoords, toCoords, fromCity, toCity, setRouteDetails]
   );
 
   const getAutocompleteOptions = (
@@ -301,7 +281,7 @@ export default function BookingSection() {
       }
 
       // Create fresh cache key to access latest data
-      const cacheKey = `${fromCity}-${toCity}-${pickupTime}`;
+      const cacheKey = `${fromCity}-${toCity}`;
       const currentDetails = routeCache.current[cacheKey];
 
       // Set booking data in session storage
@@ -311,7 +291,7 @@ export default function BookingSection() {
         destination: tripType === 'LOCAL' ? '' : toCity!,
         pickupDate: pickupDate!,
         pickupTime: pickupTime!,
-        distance: tripType === 'LOCAL' ? 0 :parseFloat(currentDetails?.distance?.replace(/[^0-9.]/g, '') || "0"),
+        distance: tripType === 'LOCAL' ? 0 :parseFloat(currentDetails?.distance || "0"),
         duration: tripType === 'LOCAL' ? 0 : currentDetails?.duration || "0",
         returnDate: returnDate || undefined,
         returnTime: undefined
