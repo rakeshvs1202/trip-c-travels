@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
 import dbConnect from "@/lib/mongodb"
 import Booking from "@/models/Booking"
-import Car from "@/models/Car"
 
 // Correct Next.js App Router route handler signature for dynamic routes
 export async function GET(request: NextRequest) {
   // Extract the booking id from the request URL path, e.g. /api/bookings/<id>
-  const id = request.nextUrl.pathname.split("/").pop() ?? ""
+  const id = request.nextUrl.pathname.split('/')[3];
+  
 
   try {
     await dbConnect()
@@ -17,25 +17,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ message: "Booking not found" }, { status: 404 })
     }
 
-    // Get car details
-    const car = await Car.findOne({ id: booking.carId })
-
-    if (!car) {
-      return NextResponse.json({ message: "Car not found" }, { status: 404 })
-    }
 
     return NextResponse.json(
       {
-        bookingId: booking.bookingId,
-        customerName: booking.customerName,
-        customerEmail: booking.customerEmail,
-        customerPhone: booking.customerPhone,
-        pickupDate: booking.pickupDate,
-        pickupTime: booking.pickupTime,
-        source: booking.source,
-        destination: booking.destination,
-        carName: car.name,
-        totalAmount: booking.totalAmount,
+        bookingDetails: booking
       },
       { status: 200 },
     )

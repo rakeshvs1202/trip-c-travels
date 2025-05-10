@@ -47,7 +47,8 @@ export default function BookingSection() {
     returnDate?: string
     pickupTime?: string
     pickupAddress?: string
-  }>({})
+  }>({});
+  const [isLoading, setIsLoading] = useState(false);
 
   // Add route cache
   const routeCache = useRef<{[key: string]: {distance: string; duration: string}}>({});
@@ -194,7 +195,6 @@ export default function BookingSection() {
         }
         break;
     }
-    console.log(`Autocomplete options for ${inputType} (${currentTripType}/${currentAirportJourneyType}):`, options.types);
     return options;
   };
 
@@ -271,11 +271,14 @@ export default function BookingSection() {
     return !Object.values(newErrors).some(error => error)
   }
 
-  const handleExploreCabs = useCallback(async () => {
-    if (!validateForm()) return
+  const handleExploreCabs = async () => {
+    if (!fromCity || !toCity || !pickupDate || !pickupTime) {
+      alert("Please fill all required fields");
+      return;
+    }
 
+    setIsLoading(true);
     try {
-      // Get route details only when needed (not for local trips)
       if (tripType !== 'LOCAL') {
         await calculateRouteDetails();
       }
@@ -303,8 +306,10 @@ export default function BookingSection() {
     } catch (error) {
       console.error("Error processing booking:", error)
       setErrors({ fromCity: "There was an error processing your request. Please try again." })
+    } finally {
+      setIsLoading(false);
     }
-  }, [tripType, fromCity, toCity, pickupDate, pickupTime, returnDate, routeDetails, router]);
+  };
 
   // Helper component for error message
   const ErrorMessage = ({ message }: { message: string }) => (
@@ -740,11 +745,20 @@ export default function BookingSection() {
           </div>
 
 
-          <button 
+          <button
             onClick={handleExploreCabs}
             className="w-full mt-6 px-8 py-3 bg-[#FF3131] text-white font-medium rounded hover:bg-[#E02020] transition-colors text-lg"
+            disabled={isLoading}
           >
-            EXPLORE CABS
+            {isLoading ? (
+              <div className="flex items-center justify-center space-x-2">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                <span>Loading...</span>
+              </div>
+            ) : (   
+    
+              <span>EXPLORE CABS</span>
+            )}
           </button>
         </div>
       </div>

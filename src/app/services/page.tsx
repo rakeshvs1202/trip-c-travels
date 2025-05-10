@@ -18,8 +18,9 @@ export default function ContactDetails() {
   })
   const [bookingDetails, setBookingDetails] = useState<any>(null)
   const [activeTab, setActiveTab] = useState('inclusions');
-const [pickupAddressAutocomplete, setPickupAddressAutocomplete] =
-    useState<google.maps.places.Autocomplete | null>(null);
+  const [pickupAddressAutocomplete, setPickupAddressAutocomplete] = 
+  useState<google.maps.places.Autocomplete | null>(null);
+  const [isPaymentLoading, setIsPaymentLoading] = useState(false)
   const { isLoaded } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
     libraries: ["places"]
@@ -34,7 +35,6 @@ const [pickupAddressAutocomplete, setPickupAddressAutocomplete] =
     }
   }
   useEffect(() => {
-    // Retrieve booking details from sessionStorage
     const storedBooking = sessionStorage.getItem("bookingData")
     if (storedBooking) {
       setBookingDetails(JSON.parse(storedBooking))
@@ -47,16 +47,13 @@ const [pickupAddressAutocomplete, setPickupAddressAutocomplete] =
       [e.target.name]: e.target.value
     })
   }
-  const debouncedFromInput = useCallback(
-    debounce((value: string) => {
-      setFormData({...formData, pickupAddress:  value });
-    }, 300),
-    []
-  );
+
   const handleAddressInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    debouncedFromInput(value);
-  };
+    setFormData(prev => ({
+      ...prev,
+      pickupAddress: e.target.value
+    }))
+  }
   const handlePickupAddressAutocompleteLoad = (
     autocomplete: google.maps.places.Autocomplete
   ) => {
@@ -66,17 +63,27 @@ const [pickupAddressAutocomplete, setPickupAddressAutocomplete] =
     const autocomplete = pickupAddressAutocomplete;
     if (!autocomplete) return;
 
-    const place = autocomplete.getPlace();
-    if (place.formatted_address) {
-        setFormData({...formData, pickupAddress:  place.formatted_address });
-    }
-  };
+    const place = autocomplete.getPlace()
+    const address = place.formatted_address || ""
+    setFormData(prev => ({
+      ...prev,
+      pickupAddress: address
+    }))
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!formData.name || !formData.email || !formData.mobile || !formData.pickupAddress) {
+      alert('Please fill in all required fields')
+      return
+    }
+
+    setIsPaymentLoading(true)
 
     try {
-      const bookingId = uuidv4();
-      const bookingInfo: any = {
+      const bookingId = uuidv4()
+      const bookingInfo = {
         bookingId,
         contactInfo: {
           name: formData.name,
@@ -106,10 +113,18 @@ const [pickupAddressAutocomplete, setPickupAddressAutocomplete] =
         body: JSON.stringify(bookingInfo)
       });
 
-      if (!response.ok) throw new Error('Failed to save booking');
-      router.push(`/payment/${bookingId}`);
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || 'Failed to create booking')
+      }
+
+      sessionStorage.setItem("bookingId", bookingId)
+      router.push(`/payment/${bookingId}`)
     } catch (error) {
-      console.error('Booking error:', error);
+      console.error('Error submitting booking:', error)
+      alert('Failed to process payment. Please try again.')
+    } finally {
+      setIsPaymentLoading(false)
     }
   }
 
@@ -117,7 +132,6 @@ const [pickupAddressAutocomplete, setPickupAddressAutocomplete] =
     <div className="min-h-screen pt-20 pb-16 bg-light-gray">
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Contact Form */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-xl font-semibold mb-6">Contact & Pickup Details</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -159,9 +173,7 @@ const [pickupAddressAutocomplete, setPickupAddressAutocomplete] =
                 {isLoaded && (
                   <Autocomplete
                     onLoad={handlePickupAddressAutocompleteLoad}
-                    onPlaceChanged={() => {
-                      handlePlaceSelect("pickup")
-                    }}
+                    onPlaceChanged={() => handlePlaceSelect("pickup")}
                   >
                     <input
                       type="text"
@@ -176,10 +188,19 @@ const [pickupAddressAutocomplete, setPickupAddressAutocomplete] =
                 )}
               </div>
               <button
+                onClick={handleSubmit}
                 type="submit"
                 className="w-full bg-[#FF3131] text-white py-2 rounded-md hover:bg-primary-dark"
+                disabled={isPaymentLoading}
               >
-                Proceed To Payment
+                {isPaymentLoading ? (
+                  <div className="flex items-center justify-center space-x-2">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                    <span >Processing Payment...</span>
+                  </div>
+                ) : (
+                  <span>Proceed to Payment</span>
+                )}
               </button>
             </form>
           </div>
@@ -337,9 +358,7 @@ const [pickupAddressAutocomplete, setPickupAddressAutocomplete] =
                 </div>
               )}
             </div>
-            
           </div>
-            
         </div>
       </div>
     </div>
