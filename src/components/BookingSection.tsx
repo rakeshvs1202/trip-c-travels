@@ -272,8 +272,8 @@ export default function BookingSection() {
   }
 
   const handleExploreCabs = async () => {
-    if (!fromCity || !toCity || !pickupDate || !pickupTime) {
-      alert("Please fill all required fields");
+    // Validate form based on trip type
+    if (!validateForm()) {
       return;
     }
 
