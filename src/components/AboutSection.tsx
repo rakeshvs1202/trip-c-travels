@@ -7,12 +7,13 @@ export default function AboutSection() {
         <h2 className="text-3xl font-bold text-center mb-12">ABOUT US</h2>
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          <div className="relative h-[500px]">
+          <div className="relative w-full aspect-[4/3] max-h-[500px]">
             <Image
               src="/info.png"
               alt="About Trip-C"
               fill
               className="object-cover"
+              sizes="(max-width: 1024px) 100vw, 50vw"
             />
           </div>
           

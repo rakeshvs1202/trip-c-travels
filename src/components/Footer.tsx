@@ -117,7 +117,7 @@ export default function Footer() {
         </div>
 
         {/* Bottom Bar */}
-        <div className="mt-12 pt-8 border-t border-gray-800 flex items-center">
+        <div className="mt-12 pt-8 border-t border-gray-800 flex items-center justify-center w-full">
           <div className="text-center">
             <p className="text-gray-400 text-sm">
               © {new Date().getFullYear()} Trip-C. All rights reserved.
