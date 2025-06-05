@@ -1,6 +1,6 @@
 import Link from "next/link"
 import Image from "next/image"
-import { Facebook, Instagram, Mail, MapPin, Phone, Globe } from "lucide-react"
+import { Mail, MapPin, Phone, Globe } from "lucide-react"
 
 export default function Footer() {
   return (
@@ -22,24 +22,6 @@ export default function Footer() {
               Your trusted travel partner for comfortable and reliable cab services across India.
               We provide premium intercity and local car rental services with expert chauffeurs.
             </p>
-            <div className="flex space-x-4 pt-2">
-              <a
-                href="https://facebook.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-gray-400 hover:text-[#FF3131] transition-colors"
-              >
-                <Facebook size={20} />
-              </a>
-              <a
-                href="https://instagram.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-gray-400 hover:text-[#FF3131] transition-colors"
-              >
-                <Instagram size={20} />
-              </a>
-            </div>
           </div>
 
           {/* Our Services */}

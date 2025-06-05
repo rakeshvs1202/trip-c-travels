@@ -21,6 +21,7 @@ export default function ContactDetails() {
   const [pickupAddressAutocomplete, setPickupAddressAutocomplete] = 
   useState<google.maps.places.Autocomplete | null>(null);
   const [isPaymentLoading, setIsPaymentLoading] = useState(false)
+  const [error, setError] = useState("")
   const { isLoaded } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
     libraries: ["places"]
@@ -42,10 +43,29 @@ export default function ContactDetails() {
   }, [])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    })
+    const { name, value } = e.target;
+    if (name === 'mobile') {
+      // Only allow numbers and limit to 10 digits
+      const numericValue = value.replace(/\D/g, '').slice(0, 10);
+      setFormData({
+        ...formData,
+        [name]: numericValue
+      });
+      
+      // Validate mobile number length
+      if (numericValue.length !== 10) {
+        setError('Please enter a valid 10-digit mobile number');
+      }
+      else{
+        setError('');
+      }
+    } else {
+      setFormData({
+        ...formData,
+        [name]: value
+      });
+      setError('');
+    }
   }
 
   const handleAddressInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -70,19 +90,25 @@ export default function ContactDetails() {
       pickupAddress: address
     }))
   }
-
+useEffect(()=>{
+  if (formData.mobile.length === 10 && formData.name && formData.email && formData.mobile && formData.pickupAddress) {
+    setError('');
+  }
+},[formData])
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!formData.name || !formData.email || !formData.mobile || !formData.pickupAddress) {
-      alert('Please fill in all required fields')
-      return
+      setError('Please fill in all required fields');
+      return;
     }
-
     setIsPaymentLoading(true)
 
     try {
-      const bookingId = uuidv4()
+      // Generate booking ID with format: TRIPC-YYYYMMDD-RANDOM
+      const now = new Date();
+      const dateStr = now.toISOString().slice(0, 10).replace(/-/g, ''); // YYYYMMDD
+      const randomStr = Math.random().toString(36).substring(2, 8).toUpperCase(); // 6 char random string
+      const bookingId = `tripc-${dateStr}-${randomStr}`;
       const bookingInfo = {
         bookingId,
         contactInfo: {
@@ -142,6 +168,7 @@ export default function ContactDetails() {
                   name="name"
                   value={formData.name}
                   onChange={handleInputChange}
+                   placeholder="Enter your name"
                   className="w-full p-2 border rounded-md"
                   required
                 />
@@ -153,6 +180,7 @@ export default function ContactDetails() {
                   name="email"
                   value={formData.email}
                   onChange={handleInputChange}
+                  placeholder="Enter your email"
                   className="w-full p-2 border rounded-md"
                   required
                 />
@@ -164,6 +192,7 @@ export default function ContactDetails() {
                   name="mobile"
                   value={formData.mobile}
                   onChange={handleInputChange}
+                  placeholder="Enter your mobile number"
                   className="w-full p-2 border rounded-md"
                   required
                 />
@@ -187,6 +216,9 @@ export default function ContactDetails() {
                   </Autocomplete>
                 )}
               </div>
+              {error && (
+                  <p className="mt-1 text-sm text-red-600">{error}</p>
+                )}
               <button
                 onClick={handleSubmit}
                 type="submit"
