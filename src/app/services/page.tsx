@@ -145,6 +145,7 @@ useEffect(()=>{
       }
 
       sessionStorage.setItem("bookingId", bookingId)
+      sessionStorage.setItem("pickupLocation",formData.pickupAddress)
       router.push(`/payment/${bookingId}`)
     } catch (error) {
       console.error('Error submitting booking:', error)

@@ -101,11 +101,45 @@ export default function Payment({ params }: { params: Promise<{ id: string }> })
           color: "#FF3131",
         },
         handler: async (response: any) => {
-          setPaymentMessage("Payment successful! Redirecting to home page...")
+          setPaymentMessage("Payment successful! Sending confirmation...")
           setShowMessage(true)
+
+          try {
+            const address = sessionStorage.getItem("pickupLocation");
+            const bookingData = sessionStorage.getItem("bookingData");
+            if(bookingData){
+              const parsedBookingData = JSON.parse(bookingData);
+              var pickupDate = parsedBookingData.pickupDate;
+            }
+            
+            // Call our secure API route to send the confirmation email
+            const emailResponse = await fetch('/api/send-confirmation', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                bookingId: bookingDetails.bookingId,
+                pickupLocation: address,
+                contactInfo: bookingDetails.contactInfo,
+                bookingData: bookingDetails.bookingData,
+                pickupDate: pickupDate
+              })
+            });
+
+            const responseData = await emailResponse.json();
+            console.log('Email API response:', responseData);
+
+            if (!emailResponse.ok) {
+              throw new Error(`Failed to send confirmation email: ${JSON.stringify(responseData)}`);
+            }
+          } catch (error) {
+            console.error("Error sending email:", error);
+          }
+          setPaymentStatus("success");
           setTimeout(() => {
-            router.push("/")
-          }, 3000)
+            router.push("/");
+          }, 7000);
         },
         modal: {
           ondismiss: async () => {

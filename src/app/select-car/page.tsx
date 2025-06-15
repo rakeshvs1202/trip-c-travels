@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { CarData } from "@/types"
 import { carData } from "@/scripts/seed-data"
+import LoadingSpinner from "@/components/ui/LoadingSpinner"
 
 
 export default function SelectCar() {
@@ -12,6 +13,7 @@ export default function SelectCar() {
   const [bookingData, setBookingData] = useState<any>(null)
   const [cars, setCars] = useState<CarData[]>([])
   const [loading, setLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(false);
   const [selectedCar, setSelectedCar] = useState<CarData | null>(null)
   const [selectedOption, setSelectedOption] = useState<any>(null);
   const [bookingPrice, setBookingPrice] = useState<number>(0);
@@ -61,7 +63,7 @@ export default function SelectCar() {
       case "OUTSTATION":
         totalPrice = Math.max(
           car.outstationRates.minBillableKm,
-          distance*2
+          distance * 2
         ) * car.outstationRates.perKm + car.outstationRates.driverAllowance;
         break;
 
@@ -114,19 +116,35 @@ export default function SelectCar() {
     }
   }, [selectedCar, bookingData, selectedOption]);
 
-  const handleCarSelect = (car: CarData) => {
-    setSelectedCar(car);
-    const price = calculatePrice(car);
-    const updatedData = { 
-      ...bookingData, 
-      selectedCar: car,
-      totalFare: price,
-      selectedPackage : bookingData?.tripType === 'LOCAL' ? selectedOption: null,
-    };
-    sessionStorage.setItem('bookingData', JSON.stringify(updatedData));
-    sessionStorage.setItem("bookingFare", price.toString());
-    setBookingData(updatedData);
-    router.push('/services');
+  const handleCarSelect = async (car: CarData) => {
+    try {
+      setIsLoading(true);
+      setSelectedCar(car);
+      const price = calculatePrice(car);
+      const updatedData = {
+        ...bookingData,
+        selectedCar: car,
+        totalFare: price,
+        selectedPackage: bookingData?.tripType === 'LOCAL' ? selectedOption : null,
+      };
+      
+      // Update state and storage
+      setBookingData(updatedData);
+      sessionStorage.setItem('bookingData', JSON.stringify(updatedData));
+      sessionStorage.setItem("bookingFare", price.toString());
+      
+      // Navigate to services page
+      router.push('/services');
+      
+      // Keep loading state true during navigation
+      return;
+      
+    } catch (error) {
+      console.error('Error selecting car:', error);
+      alert('Failed to select car. Please try again.');
+      setIsLoading(false);
+      router.push('/');
+    }
   };
 
   const filteredCars = bookingData?.tripType === 'LOCAL' && selectedOption
@@ -137,8 +155,8 @@ export default function SelectCar() {
       )
     )
     : bookingData?.tripType === 'AIRPORT'
-    ? cars.filter(car => car.airportRates && car.airportRates.length > 0)
-    : cars;
+      ? cars.filter(car => car.airportRates && car.airportRates.length > 0)
+      : cars;
 
   const DetailsModal = ({ car }: { car: any }) => (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -152,7 +170,7 @@ export default function SelectCar() {
             ✕
           </button>
         </div>
-        
+
         {/* Tabs */}
         <div className="border-b border-gray-200 mb-4">
           <div className="flex gap-6">
@@ -160,11 +178,10 @@ export default function SelectCar() {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`pb-2 px-1 ${
-                  activeTab === tab
+                className={`pb-2 px-1 ${activeTab === tab
                     ? 'border-b-2 border-[#FF3131] font-medium'
                     : 'text-gray-500 hover:text-gray-700'
-                }`}
+                  }`}
               >
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
               </button>
@@ -355,9 +372,21 @@ export default function SelectCar() {
                 </p>
                 <button
                   onClick={() => handleCarSelect(car)}
-                  className="w-full mt-4 px-6 py-2 bg-[#FF3131] text-white font-medium rounded hover:bg-[#E02020] transition-colors"
+                  disabled={isLoading}
+                  className={`w-full mt-4 px-6 py-2 font-normal rounded transition-colors flex items-center justify-center gap-2 ${
+                    isLoading 
+                      ? 'bg-[#E02020] opacity-70 cursor-not-allowed' 
+                      : 'bg-[#FF3131] hover:bg-[#E02020]'
+                  }`}
                 >
-                  Select
+                  {isLoading ? (
+                    <>
+                      <LoadingSpinner size="sm" color="text-white" />
+                      <span>Selecting...</span>
+                    </>
+                  ) : (
+                    'Select Car'
+                  )}
                 </button>
               </div>
             </div>

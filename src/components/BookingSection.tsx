@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import LoadingSpinner from "./ui/LoadingSpinner";
 import { Calendar, Clock, ArrowLeftRight, AlertCircle } from "lucide-react";
 import { debounce } from "lodash";
 import DatePicker from "react-datepicker";
@@ -747,17 +748,16 @@ export default function BookingSection() {
 
           <button
             onClick={handleExploreCabs}
-            className="w-full mt-6 px-8 py-3 bg-[#FF3131] text-white font-medium rounded hover:bg-[#E02020] transition-colors text-lg"
+            className="w-full bg-[#FF3131] hover:bg-[#E02020] text-white font-medium py-3 px-6 mt-6 rounded-lg transition duration-200 flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed"
             disabled={isLoading}
           >
             {isLoading ? (
-              <div className="flex items-center justify-center space-x-2">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
-                <span>Loading...</span>
-              </div>
-            ) : (   
-    
-              <span>EXPLORE CABS</span>
+              <>
+                Exploring Cabs...
+                <LoadingSpinner className="mr-2" size="sm" color="text-white" />
+              </>
+            ) : (
+              'EXPLORE CABS'
             )}
           </button>
         </div>
