@@ -387,6 +387,7 @@ useEffect(()=>{
                     <li>• The Airport entry charge, if applicable, is not included in the fare and will be charged extra.</li>
                     <li>• All road toll fees, parking charges, state taxes etc. if applicable will be charged extra and need to be paid to the concerned authorities as per actuals.</li>
                     <li>• For driving between 09:45 PM to 06:00 AM on any of the nights, an additional allowance will be applicable and is to be paid to the driver.</li>
+                    <li>• If your Trip has Hill climbs, cab AC may be switched off during such climbs.</li>
                   </ul>
                 </div>
               )}

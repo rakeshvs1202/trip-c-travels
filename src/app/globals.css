@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Reset body styles to prevent hydration mismatch */
+body {
+  margin: 0;
+  padding: 0;
+}
+
 :root {
   --foreground-rgb: 0, 0, 0;
   --background-start-rgb: 255, 255, 255;

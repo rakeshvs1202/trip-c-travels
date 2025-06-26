@@ -9,9 +9,9 @@ export const carData = [
       features: ["AC", "Music System", "Comfortable Seating"],
       localRates: {
         hourly: [
-          { duration: "1hrs", kms: 10 },
-          { duration: "4hrs", kms: 40},
           { duration: "8hrs", kms: 80 },
+          { duration: "4hrs", kms: 40},
+          { duration: "12hrs", kms: 120 },
         ],
         price:[
           {perMinute:2, perKm:17},
@@ -19,7 +19,7 @@ export const carData = [
         ]
       },
       outstationRates: {
-        perKm: 15,
+        perKm: 16,
         exKmRate:17,
         minBillableKm: 250,
         driverAllowance: 350,
@@ -47,7 +47,7 @@ export const carData = [
         hourly: [
           { duration: "1hrs", kms: 10},
           { duration: "4hrs", kms: 40 },
-          { duration: "8hrs", kms: 80},
+          { duration: "12hrs", kms: 120},
         ],
         price:[
           {perMinute:2.5, perKm:19},
@@ -71,9 +71,8 @@ export const carData = [
       features: ["AC", "Music System", "Spacious", "Family Friendly"],
       localRates: {
         hourly: [
-          { duration: "1hrs", kms: 10 },
-          { duration: "4hrs", kms: 40  },
           { duration: "8hrs", kms: 80 },
+          { duration: "12hrs", kms: 120 },
         ],
         price:[
           {perMinute:2.8, perKm:21},
@@ -107,9 +106,8 @@ export const carData = [
       features: ["AC", "Music System", "Spacious", "Comfortable for Long Journeys"],
       localRates: {
         hourly: [
-          { duration: "1hrs", kms: 10},
-          { duration: "4hrs", kms: 40},
-          { duration: "8hrs", kms: 80 },
+          { duration: "8hrs", kms: 80},
+          { duration: "12hrs", kms: 120 },
         ],
         price:[
           {perMinute:3.5, perKm:24},
@@ -143,9 +141,8 @@ export const carData = [
       features: ["AC", "Music System", "Premium Interior", "Extra Comfort"],
       localRates: {
         hourly: [
-          { duration: "1hrs", kms: 10  },
-          { duration: "4hrs", kms: 40  },
           { duration: "8hrs", kms: 80  },
+          { duration: "12hrs", kms: 120  },
         ],
         price:[
           {perMinute:3.6, perKm:27},
@@ -179,9 +176,8 @@ export const carData = [
       features: ["AC", "Music System", "Premium Interior", "Extra Comfort"],
       localRates: {
         hourly: [
-          { duration: "1hrs", kms: 10  },
-          { duration: "4hrs", kms: 40  },
           { duration: "8hrs", kms: 80  },
+          { duration: "12hrs", kms: 120  },
         ],
         price:[
           {perMinute:4.3, perKm:30},
@@ -204,7 +200,7 @@ export const carData = [
       luggageCapacity: 4,
       features: ["AC", "Music System", "Luxury Interior", "Powerful Engine"],
       localRates: {
-        hourly: [{ duration: "8hrs", kms: 80}],
+        hourly: [{ duration: "12hrs", kms: 120}],
         price:[
           {perMinute:15.83, perKm:100},
           {exMinRate:12, exKmRate:70 }
@@ -226,8 +222,8 @@ export const carData = [
       features: ["AC", "Premium Sound System", "Luxury Interior", "Executive Comfort"],
       localRates: {
         hourly: [
-          { duration: "1hrs", kms: 10  },
           { duration: "8hrs", kms: 80  },
+          { duration: "12hrs", kms: 120  },
         ],
         price:[
           {perMinute:15.83, perKm:100},
@@ -250,8 +246,8 @@ export const carData = [
       features: ["AC", "Premium Sound System", "Luxury Interior", "Executive Comfort"],
       localRates: {
         hourly: [
-          { duration: "1hrs", kms: 10  },
           { duration: "8hrs", kms: 80  },
+          { duration: "12hrs", kms: 120  },
         ],
         price:[
           {perMinute:20, perKm:125},
@@ -274,8 +270,8 @@ export const carData = [
       features: ["Spacious", "Group Travel", "Comfortable Seating"],
       localRates: {
         hourly: [
-          { duration: "1hrs", kms: 10  },
           { duration: "8hrs", kms: 80  },
+          { duration: "12hrs", kms: 120  },
         ],
         price:[
           {perMinute:3.75, perKm:25},
@@ -304,8 +300,8 @@ export const carData = [
       features: ["AC", "Spacious", "Group Travel", "Comfortable Seating"],
       localRates: {
         hourly: [
-          { duration: "1hrs", kms: 10  },
           { duration: "8hrs", kms: 80  },
+          { duration: "12hrs", kms: 120  },
         ],
         price:[
           {perMinute: 5, perKm:28},

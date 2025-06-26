@@ -21,9 +21,9 @@ export default function SelectCar() {
   const [activeTab, setActiveTab] = useState('inclusions');
 
   const localOptions = [
-    { duration: "1hrs", kms: 10 },
     { duration: "4hrs", kms: 40 },
-    { duration: "8hrs", kms: 80 }
+    { duration: "8hrs", kms: 80 },
+    { duration: "12hrs", kms: 120},
   ];
 
   useEffect(() => {
@@ -209,7 +209,7 @@ export default function SelectCar() {
           )}
           {(activeTab === 'exclusions' && bookingData?.tripType === 'OUTSTATION') && (
             <div className="space-y-3">
-              <p>❌ Pay ₹{car.outstationRates.exKmRate}/km after {bookingData?.distance}km</p>
+              <p>❌ Pay ₹{car.outstationRates.exKmRate}/km after {bookingData?.distance*2}km</p>
               <p>❌ Toll / State tax</p>
               <p>❌ Parking charges</p>
             </div>
@@ -223,11 +223,12 @@ export default function SelectCar() {
 
           {activeTab === 'terms' && (
             <div className="space-y-3 text-sm">
-              <p>⚠️ Your Trip has a KM limit as well as an Hours limit. Excess usage will be charged.</p>
-              <p>⚠️ KM and Hours calculated from pick-up to return.</p>
-              <p>⚠️ Airport entry charges (if applicable) are extra.</p>
-              <p>⚠️ All tolls, parking, and taxes are extra.</p>
-              <p>⚠️ Night driving (9:45 PM - 6:00 AM) incurs additional allowance.</p>
+              <p className="flex items-start gap-2"><Image src="/tickMark.png" alt="" width={20} height={20} className="w-4 h-4 mt-0.5 flex-shrink-0" /> Your Trip has a KM limit as well as an Hours limit. Excess usage will be charged.</p>
+              <p className="flex items-start gap-2"><Image src="/tickMark.png" alt="" width={16} height={16} className="w-4 h-4 mt-0.5 flex-shrink-0" /> KM and Hours calculated from pick-up to return.</p>
+              <p className="flex items-start gap-2"><Image src="/tickMark.png" alt="" width={16} height={16} className="w-4 h-4 mt-0.5 flex-shrink-0" /> Airport entry charges (if applicable) are extra.</p>
+              <p className="flex items-start gap-2"><Image src="/tickMark.png" alt="" width={16} height={16} className="w-4 h-4 mt-0.5 flex-shrink-0" /> All tolls, parking, and taxes are extra.</p>
+              <p className="flex items-start gap-2"><Image src="/tickMark.png" alt="" width={16} height={16} className="w-4 h-4 mt-0.5 flex-shrink-0" /> Night driving (9:45 PM - 6:00 AM) incurs additional allowance.</p>
+              <p className="flex items-start gap-2"><Image src="/tickMark.png" alt="" width={16} height={16} className="w-4 h-4 mt-0.5 flex-shrink-0" /> If your Trip has Hill climbs, cab AC may be switched off during such climbs.</p>
             </div>
           )}
         </div>
