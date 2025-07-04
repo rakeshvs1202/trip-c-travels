@@ -23,7 +23,6 @@ export async function POST(request: Request) {
     `;
 
     console.log('Sending email to:', bookingDetails.contactInfo.email);
-    console.log('Using Mailjet API Key:', process.env.MAILJET_API_KEY ? '***' + process.env.MAILJET_API_KEY.slice(-4) : 'Not found');
 
     // Prepare SMS content
     const smsText = `Dear ${bookingDetails.contactInfo.name || 'Customer'}, your Trip-C booking #${bookingDetails.bookingId} is confirmed. ${bookingDetails.selectedCar?.name || 'Vehicle'} booked for ${new Date(bookingDetails.pickupDate).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}. Total Fare: ₹${bookingDetails.bookingData.totalFare}. Safe travels!`;

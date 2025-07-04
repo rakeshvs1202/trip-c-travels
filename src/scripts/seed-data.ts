@@ -45,7 +45,7 @@ export const carData = [
       features: ["AC", "Music System", "Comfortable Seating", "Extra Legroom"],
       localRates: {
         hourly: [
-          { duration: "1hrs", kms: 10},
+          { duration: "8hrs", kms: 80},
           { duration: "4hrs", kms: 40 },
           { duration: "12hrs", kms: 120},
         ],
@@ -200,7 +200,7 @@ export const carData = [
       luggageCapacity: 4,
       features: ["AC", "Music System", "Luxury Interior", "Powerful Engine"],
       localRates: {
-        hourly: [{ duration: "12hrs", kms: 120}],
+        hourly: [{ duration: "8hrs", kms: 80  },{ duration: "12hrs", kms: 120}],
         price:[
           {perMinute:15.83, perKm:100},
           {exMinRate:12, exKmRate:70 }

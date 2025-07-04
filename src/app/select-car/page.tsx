@@ -1,30 +1,48 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { CarData } from "@/types"
 import { carData } from "@/scripts/seed-data"
 import LoadingSpinner from "@/components/ui/LoadingSpinner"
+import dynamic from 'next/dynamic';
+import { toast } from 'sonner';
+import CustomerInfoPopup from '@/components/CustomerInfoPopup';
+
 
 
 export default function SelectCar() {
   const router = useRouter()
   const [bookingData, setBookingData] = useState<any>(null)
-  const [cars, setCars] = useState<CarData[]>([])
-  const [loading, setLoading] = useState(true)
+  const [showCustomerPopup, setShowCustomerPopup] = useState(false);
+  const [customerData, setCustomerData] = useState<any>(null);
+  const [cars, setCars] = useState<CarData[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedCar, setSelectedCar] = useState<CarData | null>(null)
+  const [selectedCar, setSelectedCar] = useState<CarData | null>(null);
   const [selectedOption, setSelectedOption] = useState<any>(null);
   const [bookingPrice, setBookingPrice] = useState<number>(0);
   const [showDetailsForCar, setShowDetailsForCar] = useState<CarData | null>(null);
   const [activeTab, setActiveTab] = useState('inclusions');
+  const [baseDistance, setBaseDistance] = useState<number>(250); // Default to 1-day base distance
 
   const localOptions = [
     { duration: "4hrs", kms: 40 },
     { duration: "8hrs", kms: 80 },
     { duration: "12hrs", kms: 120},
   ];
+
+  // Show popup on component mount
+  useEffect(() => {
+    setShowCustomerPopup(true);
+  }, []);
+
+  const handleCustomerSuccess = (data: any) => {
+    setCustomerData(data);
+    setShowCustomerPopup(false);
+    toast.success('Customer information saved successfully!');
+  };
 
   useEffect(() => {
     // Get booking data from sessionStorage
@@ -49,11 +67,35 @@ export default function SelectCar() {
     }
 
     // Use the car data from seed-data
-    setCars(carData as CarData[])
-    setLoading(false)
+    setCars(carData as CarData[]);
+    setLoading(false);
   }, [router])
 
-  const calculatePrice = (car: any) => {
+
+
+  // Calculate trip days and base distance using useMemo
+  const { tripDays, calculatedBaseDistance } = useMemo(() => {
+    let days = 1;
+    let baseDist = 250;
+    
+    if (bookingData?.pickupDate && bookingData?.returnDate) {
+      const pickupDate = new Date(bookingData.pickupDate);
+      const returnDate = new Date(bookingData.returnDate);
+      
+      if (!isNaN(pickupDate.getTime()) && !isNaN(returnDate.getTime())) {
+        const timeDiff = returnDate.getTime() - pickupDate.getTime();
+        days = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1;
+        baseDist = days === 1 ? 250 : 270 * days;
+      }
+    }
+    
+    // Sync baseDistance with the new calculated value
+    setBaseDistance(baseDist);
+    
+    return { tripDays: days, calculatedBaseDistance: baseDist };
+  }, [bookingData?.pickupDate, bookingData?.returnDate]);
+
+  const calculatePrice = useCallback((car: any) => {
     if (!bookingData) return 0;
 
     const { distance, tripType } = bookingData;
@@ -61,10 +103,15 @@ export default function SelectCar() {
 
     switch (tripType.toUpperCase()) {
       case "OUTSTATION":
-        totalPrice = Math.max(
-          car.outstationRates.minBillableKm,
-          distance * 2
-        ) * car.outstationRates.perKm + car.outstationRates.driverAllowance;
+        const exKmRate = car.outstationRates.exKmRate || car.outstationRates.perKm;
+        if (distance <= calculatedBaseDistance) {
+          totalPrice = calculatedBaseDistance * car.outstationRates.perKm + 
+                     (car.outstationRates.driverAllowance * tripDays);
+        } else {
+          totalPrice = calculatedBaseDistance * car.outstationRates.perKm +
+                     (car.outstationRates.driverAllowance * tripDays) +
+                     ((distance - calculatedBaseDistance) * exKmRate);
+        }
         break;
 
       case "AIRPORT":
@@ -92,7 +139,7 @@ export default function SelectCar() {
         totalPrice = 0;
     }
     return Math.round(totalPrice);
-  };
+  }, [bookingData]);
 
   const calculateAirportFare = (car: CarData, distance: number) => {
     const rates = car.airportRates
@@ -201,23 +248,23 @@ export default function SelectCar() {
 
           {(activeTab === 'exclusions' && bookingData?.tripType === 'LOCAL') && (
             <div className="space-y-3">
-              <p>❌ Pay ₹{car.localRates.price[1].exKmRate}/km after {parseInt(selectedOption.split('|')[1].trim().replace('kms', ''))}km</p>
-              <p>❌ Pay ₹{car.localRates?.price[1]?.exMinRate * 60}/hr after {parseInt(selectedOption.split('|')[0].trim().replace('hrs', ''))} hours</p>
-              <p>❌ Toll / State tax</p>
-              <p>❌ Parking charges</p>
+              <p className="flex items-start gap-2"><Image src="/rejectionImg.png" alt="" width={20} height={20} className="w-5 h-5 mt-0.5 flex-shrink-0" /> Pay ₹{car.localRates.price[1].exKmRate}/km after {parseInt(selectedOption.split('|')[1].trim().replace('kms', ''))}km</p>
+              <p className="flex items-start gap-2"><Image src="/rejectionImg.png" alt="" width={20} height={20} className="w-5 h-5 mt-0.5 flex-shrink-0" /> Pay ₹{car.localRates?.price[1]?.exMinRate * 60}/hr after {parseInt(selectedOption.split('|')[0].trim().replace('hrs', ''))} hours</p>
+              <p className="flex items-start gap-2"><Image src="/rejectionImg.png" alt="" width={20} height={20} className="w-5 h-5 mt-0.5 flex-shrink-0" /> Toll / State tax</p>
+              <p className="flex items-start gap-2"><Image src="/rejectionImg.png" alt="" width={20} height={20} className="w-5 h-5 mt-0.5 flex-shrink-0" /> Parking charges</p>
             </div>
           )}
           {(activeTab === 'exclusions' && bookingData?.tripType === 'OUTSTATION') && (
             <div className="space-y-3">
-              <p>❌ Pay ₹{car.outstationRates.exKmRate}/km after {bookingData?.distance*2}km</p>
-              <p>❌ Toll / State tax</p>
-              <p>❌ Parking charges</p>
+              <p className="flex items-start gap-2"><Image src="/rejectionImg.png" alt="" width={20} height={20} className="w-5 h-5 mt-0.5 flex-shrink-0" /> Pay ₹{car.outstationRates.exKmRate}/km after {baseDistance}km</p>
+              <p className="flex items-start gap-2"><Image src="/rejectionImg.png" alt="" width={20} height={20} className="w-5 h-5 mt-0.5 flex-shrink-0" /> Toll / State tax</p>
+              <p className="flex items-start gap-2"><Image src="/rejectionImg.png" alt="" width={20} height={20} className="w-5 h-5 mt-0.5 flex-shrink-0" /> Parking charges</p>
             </div>
           )}
           {(activeTab === 'exclusions' && bookingData?.tripType === 'AIRPORT') && (
             <div className="space-y-3">
-              <p>❌ Toll / State tax</p>
-              <p>❌ Parking charges</p>
+              <p className="flex items-start gap-2"><Image src="/rejectionImg.png" alt="" width={20} height={20} className="w-5 h-5 mt-0.5 flex-shrink-0" /> Toll / State tax</p>
+              <p className="flex items-start gap-2"><Image src="/rejectionImg.png" alt="" width={20} height={20} className="w-5 h-5 mt-0.5 flex-shrink-0" /> Parking charges</p>
             </div>
           )}
 
@@ -245,7 +292,13 @@ export default function SelectCar() {
   }
 
   return (
-    <div className="container mx-auto px-4">
+    <>
+      <CustomerInfoPopup 
+        isOpen={showCustomerPopup} 
+        onClose={() => setShowCustomerPopup(false)} 
+        onSuccess={handleCustomerSuccess}
+      />
+      <div className="container mx-auto px-4">
       {/* Journey Details Section */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-8">
         <h2 className="text-2xl font-semibold mb-4 text-center">Journey Details</h2>
@@ -397,5 +450,6 @@ export default function SelectCar() {
 
       {showDetailsForCar && <DetailsModal car={showDetailsForCar} />}
     </div>
+    </>
   )
 }
