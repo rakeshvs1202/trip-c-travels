@@ -39,6 +39,9 @@ export const metadata: Metadata = {
     "intercity cab service"
   ],
   authors: [{ name: "Trip-C Travels" }],
+  icons: {
+    icon: '/favicon.ico',
+  },
   creator: "Trip-C Travels",
   publisher: "Trip-C Travels",
   formatDetection: {

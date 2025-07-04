@@ -22,6 +22,7 @@ export default function ContactDetails() {
   useState<google.maps.places.Autocomplete | null>(null);
   const [isPaymentLoading, setIsPaymentLoading] = useState(false)
   const [error, setError] = useState("")
+  const [baseDistance, setBaseDistance] = useState<number>(250);
   const { isLoaded } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
     libraries: ["places"]
@@ -39,6 +40,10 @@ export default function ContactDetails() {
     const storedBooking = sessionStorage.getItem("bookingData")
     if (storedBooking) {
       setBookingDetails(JSON.parse(storedBooking))
+    }
+    const baseDistance = sessionStorage.getItem("baseDistance")
+    if(baseDistance){
+      setBaseDistance(parseInt(baseDistance))
     }
   }, [])
 
@@ -365,7 +370,7 @@ useEffect(()=>{
                     </li>)}
                     {(bookingDetails?.tripType === 'OUTSTATION') && (<li className="flex items-center gap-2">
                       <span className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 bg-gray-50 text-gray-600">💸</span>
-                      <span>Pay ₹{bookingDetails?.selectedCar?.outstationRates?.exKmRate}/km after {bookingDetails?.distance}km</span>
+                      <span>Pay ₹{bookingDetails?.selectedCar?.outstationRates?.exKmRate}/km after {baseDistance}km</span>
                     </li>)}
                     <li className="flex items-center gap-2">
                       <span className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 bg-gray-50 text-gray-600">🛣️</span>

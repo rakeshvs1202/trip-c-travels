@@ -90,6 +90,7 @@ export default function SelectCar() {
     }
     
     // Sync baseDistance with the new calculated value
+    sessionStorage.setItem('baseDistance', baseDist.toString());
     setBaseDistance(baseDist);
     
     return { tripDays: days, calculatedBaseDistance: baseDist };
