@@ -119,6 +119,69 @@ export default function CustomerInfoPopup({ isOpen, onClose, onSuccess }: Custom
     }
   };
 
+  const verifyOtpWithRetry = async (email: string, otp: string, customerData: any, maxRetries = 3, retryCount = 0): Promise<any> => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    
+    try {
+      const storedOtp = sessionStorage.getItem('otp');
+      if (!storedOtp) {
+        throw new Error('OTP expired. Please request a new one.');
+      }
+
+      const response = await fetch('/api/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          otp,
+          storedOtp,
+          customerData: {
+            name: customerData.name,
+            email: customerData.email,
+            phone: customerData.phone
+          }
+        }),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      // Handle non-JSON responses
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('Non-JSON response received:', { status: response.status, text });
+        throw new Error('Invalid response from server. Please try again.');
+      }
+
+      const data = await response.json();
+      
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'OTP verification failed');
+      }
+      
+      return data;
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      
+      // Retry for network errors or server errors (status >= 500)
+      if (
+        (error.name === 'AbortError' || 
+         error.name === 'TypeError' || 
+         (error.response && error.response.status >= 500)) && 
+        retryCount < maxRetries
+      ) {
+        console.log(`Retry ${retryCount + 1} of ${maxRetries}...`);
+        // Wait for 1s before retrying (with exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+        return verifyOtpWithRetry(email, otp, customerData, maxRetries, retryCount + 1);
+      }
+      
+      throw error;
+    }
+  };
+
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setOtpError('');
@@ -138,28 +201,8 @@ export default function CustomerInfoPopup({ isOpen, onClose, onSuccess }: Custom
         throw new Error('Session expired. Please try again.');
       }
       
-      const storedOtp = sessionStorage.getItem('otp');
-      // Verify OTP with server
-      const response = await fetch('/api/verify-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: customerData.email,
-          otp,
-          storedOtp,
-          customerData: {
-            name: customerData.name,
-            email: customerData.email,
-            phone: customerData.phone
-          }
-        }),
-      });
-
-      const data = await response.json();
-      
-      if (!response.ok || !data.success) {
-        throw new Error(data.message || 'OTP verification failed');
-      }
+      // Verify OTP with retry logic
+      const data = await verifyOtpWithRetry(customerData.email, otp, customerData);
       
       // Create verified customer data
       const verifiedCustomer = {

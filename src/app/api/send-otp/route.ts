@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     // Prepare email content
     const emailContent = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
-        <h2 style="color: #FF3131;">Trip-C Travels - OTP Verification</h2>
+        <h3 style="color: #212529;">Trip-C Travels - OTP Verification</h3>
         <p>Your OTP for verification is:</p>
         <div style="font-size: 24px; font-weight: bold; letter-spacing: 4px; margin: 20px 0; padding: 15px; background-color: #f3f4f6; display: inline-block; border-radius: 4px; border: 1px dashed #9ca3af;">
           ${otp}

@@ -2,17 +2,39 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Customer from '@/models/Customer';
 
-
-// Connect to MongoDB
-await dbConnect();
-
 export async function POST(request: Request) {
   try {
-    const { email, otp, customerData ,storedOtp} = await request.json();
+    console.log('Verify OTP request received');
+    
+    // Connect to database first
+    try {
+      await dbConnect();
+      console.log('Database connected successfully');
+    } catch (dbError) {
+      console.error('Database connection error:', dbError);
+      return NextResponse.json(
+        { success: false, message: 'Database connection error' },
+        { status: 500 }
+      );
+    }
+
+    let body;
+    try {
+      body = await request.json();
+      console.log('Request body:', JSON.stringify(body, null, 2));
+    } catch (parseError) {
+      console.error('Error parsing request body:', parseError);
+      return NextResponse.json(
+        { success: false, message: 'Invalid request body' },
+        { status: 400 }
+      );
+    }
+
+    const { email, otp, customerData, storedOtp } = body;
 
     // Validate input
     if (!email || !otp) {
-      console.error('Missing email or OTP');
+      console.error('Missing required fields:', { email: !!email, otp: !!otp });
       return NextResponse.json(
         { 
           success: false,
@@ -22,9 +44,19 @@ export async function POST(request: Request) {
       );
     }
 
-    
-    
+    if (!storedOtp) {
+      console.error('Missing storedOtp in request');
+      return NextResponse.json(
+        { 
+          success: false,
+          message: 'Invalid request: Missing stored OTP' 
+        },
+        { status: 400 }
+      );
+    }
+
     if (otp !== storedOtp) {
+      console.error('OTP mismatch', { receivedOtp: otp, storedOtp });
       return NextResponse.json(
         { 
           success: false,
@@ -69,12 +101,19 @@ export async function POST(request: Request) {
 
   } catch (error) {
     console.error('Error in verify-otp:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error details:', { errorMessage, stack: error instanceof Error ? error.stack : 'No stack trace' });
+    
     return NextResponse.json(
       { 
         success: false,
-        message: 'Internal server error' 
+        message: 'Internal server error',
+        error: process.env.NODE_ENV === 'development' ? errorMessage : undefined
       },
-      { status: 500 }
+      { 
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      }
     );
   }
 }
