@@ -381,7 +381,7 @@ export default function CustomerInfoPopup({ isOpen, onClose, onSuccess }: Custom
         ) : (
           <form onSubmit={handleVerifyOtp} className="space-y-4">
             <p className="text-sm text-gray-600 mb-4">
-              We've sent a 6-digit OTP to {formData.email}. Please check spam folder andenter it below to verify your email.
+              We've sent a 6-digit OTP to {formData.email}. Please check spam folder and enter it below to verify your email.
             </p>
             
             <div>

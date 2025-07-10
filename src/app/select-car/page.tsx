@@ -45,30 +45,33 @@ export default function SelectCar() {
   };
 
   useEffect(() => {
-    // Get booking data from sessionStorage
-    const storedData = sessionStorage.getItem('bookingData');
-    if (storedData) {
-      const parsedData = JSON.parse(storedData);
-      // Convert string dates back to Date objects
-      if (parsedData.pickupDate) {
-        parsedData.pickupDate = new Date(parsedData.pickupDate);
-      }
-      if (parsedData.returnDate) {
-        parsedData.returnDate = new Date(parsedData.returnDate);
-      }
-      setBookingData(parsedData);
+    // Only run on client side
+    if (typeof window !== 'undefined') {
+      // Get booking data from sessionStorage
+      const storedData = sessionStorage.getItem('bookingData');
+      if (storedData) {
+        const parsedData = JSON.parse(storedData);
+        // Convert string dates back to Date objects
+        if (parsedData.pickupDate) {
+          parsedData.pickupDate = new Date(parsedData.pickupDate);
+        }
+        if (parsedData.returnDate) {
+          parsedData.returnDate = new Date(parsedData.returnDate);
+        }
+        setBookingData(parsedData);
 
-      // Set default selected option for LOCAL trips
-      if (parsedData.tripType === 'LOCAL') {
-        setSelectedOption('4hrs | 40kms');
+        // Set default selected option for LOCAL trips
+        if (parsedData.tripType === 'LOCAL') {
+          setSelectedOption('4hrs | 40kms');
+        }
+      } else {
+        router.push('/');
       }
-    } else {
-      router.push('/');
+
+      // Use the car data from seed-data
+      setCars(carData as CarData[]);
+      setLoading(false);
     }
-
-    // Use the car data from seed-data
-    setCars(carData as CarData[]);
-    setLoading(false);
   }, [router])
 
 
@@ -90,7 +93,9 @@ export default function SelectCar() {
     }
     
     // Sync baseDistance with the new calculated value
-    sessionStorage.setItem('baseDistance', baseDist.toString());
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('baseDistance', baseDist.toString());
+    }
     setBaseDistance(baseDist);
     
     return { tripDays: days, calculatedBaseDistance: baseDist };
@@ -140,7 +145,7 @@ export default function SelectCar() {
         totalPrice = 0;
     }
     return Math.round(totalPrice);
-  }, [bookingData]);
+  }, [bookingData, selectedOption, calculatedBaseDistance, tripDays]);
 
   const calculateAirportFare = (car: CarData, distance: number) => {
     const rates = car.airportRates
@@ -178,8 +183,10 @@ export default function SelectCar() {
       
       // Update state and storage
       setBookingData(updatedData);
-      sessionStorage.setItem('bookingData', JSON.stringify(updatedData));
-      sessionStorage.setItem("bookingFare", price.toString());
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('bookingData', JSON.stringify(updatedData));
+        sessionStorage.setItem("bookingFare", price.toString());
+      }
       
       // Navigate to services page
       router.push('/services');
