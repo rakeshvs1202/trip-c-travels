@@ -123,7 +123,9 @@ export default function Payment({ params }: { params: Promise<{ id: string }> })
                 pickupLocation: address,
                 contactInfo: bookingDetails.contactInfo,
                 bookingData: bookingDetails.bookingData,
-                pickupDate: pickupDate
+                pickupDate: pickupDate,
+                selectedCar: bookingDetails.selectedCar, 
+                tripType: bookingDetails.bookingData?.tripType 
               })
             });
 

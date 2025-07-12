@@ -118,6 +118,10 @@ export async function POST(request: Request) {
           Email: bookingDetails.contactInfo.email,
           Name: bookingDetails.contactInfo.name || 'Valued Customer'
         }],
+        Cc: [{
+          Email: 'tripcbooking05@gmail.com',
+          Name: 'Trip-C Admin'
+        }],
         Subject: `Booking Confirmation - ${bookingDetails.bookingId}`,
         HTMLPart: emailContent,
         Headers: {
