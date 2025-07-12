@@ -19,8 +19,8 @@ export const carData = [
         ]
       },
       outstationRates: {
-        perKm: 16,
-        exKmRate:17,
+        perKm: 15,
+        exKmRate:16,
         minBillableKm: 250,
         driverAllowance: 350,
       },
