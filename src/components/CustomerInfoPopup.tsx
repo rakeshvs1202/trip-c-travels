@@ -193,10 +193,17 @@ export default function CustomerInfoPopup({ isOpen, onClose, onSuccess }: Custom
       // Clear any existing reCAPTCHA verifier
       if (window.recaptchaVerifier) {
         try { 
-          window.recaptchaVerifier.clear(); 
-          window.recaptchaVerifier = undefined;
+          // Instead of clearing, we'll create a new container for reCAPTCHA
+          const container = document.getElementById('recaptcha-container');
+          if (container) {
+            container.innerHTML = ''; // Clear the container
+            const newContainer = document.createElement('div');
+            newContainer.id = 'recaptcha-container';
+            container.parentNode?.insertBefore(newContainer, container);
+            container.remove();
+          }
         } catch (e) {
-          console.warn('Error clearing reCAPTCHA verifier:', e);
+          console.warn('Error resetting reCAPTCHA container:', e);
         }
       }
       
