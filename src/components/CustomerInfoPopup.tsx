@@ -39,10 +39,11 @@ export default function CustomerInfoPopup({ isOpen, onClose, onSuccess }: Custom
   const [otpError, setOtpError] = useState('');
   const [formData, setFormData] = useState({ name: '', email: '', phone: '' });
   const [emailError, setEmailError] = useState('');
-  const [countdown, setCountdown] = useState(30);
+  const [countdown, setCountdown] = useState(60); // Changed from 30 to 60 seconds
   const [isVerified, setIsVerified] = useState(false);
   const [recaptchaVerifier, setRecaptchaVerifier] = useState<RecaptchaVerifier | null>(null);
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+  const [lastOtpRequestTime, setLastOtpRequestTime] = useState<number>(0);
 
   const validateEmail = (email: string) => /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/.test(email);
 
@@ -176,58 +177,72 @@ export default function CustomerInfoPopup({ isOpen, onClose, onSuccess }: Custom
         throw new Error('Phone number not found. Please fill out the form again.');
       }
       
+      // Get last request time from session storage
+      const lastRequestKey = `otp_last_request_${phone}`;
+      const lastRequestTime = parseInt(sessionStorage.getItem(lastRequestKey) || '0', 10);
+      
+      // Check rate limiting (60 seconds cooldown)
+      const COOLDOWN_PERIOD = 60000; // 60 seconds in milliseconds
+      const timeSinceLastRequest = Date.now() - lastRequestTime;
+      
+      if (timeSinceLastRequest < COOLDOWN_PERIOD) {
+        const remainingTime = Math.ceil((COOLDOWN_PERIOD - timeSinceLastRequest) / 1000);
+        throw new Error(`Please wait ${remainingTime} seconds before requesting a new OTP`);
+      }
+      
+      // Clear any existing reCAPTCHA verifier
+      if (window.recaptchaVerifier) {
+        try { 
+          window.recaptchaVerifier.clear(); 
+          window.recaptchaVerifier = undefined;
+        } catch (e) {
+          console.warn('Error clearing reCAPTCHA verifier:', e);
+        }
+      }
+      
       // Request new OTP
       await requestOtp(phone);
       
-      // Reset countdown
-      setCountdown(30);
+      // Update last request time in session storage
+      sessionStorage.setItem(lastRequestKey, Date.now().toString());
+      
+      // Reset countdown and update state
+      setCountdown(60);
+      setLastOtpRequestTime(Date.now());
       
       // Show success message
-      const toastStyle: React.CSSProperties = {
-        background: '#10B981',
-        color: '#fff',
-        fontSize: '14px',
-        padding: '10px 20px',
-        borderRadius: '8px',
-      };
-      
       toast.success('New OTP sent successfully!', {
-        position: 'top-center',
-        duration: 3000,
-        style: toastStyle,
+        style: {
+          background: '#10B981',
+          color: '#fff',
+          fontSize: '14px',
+          padding: '10px 20px',
+        },
       });
-      
     } catch (error: any) {
       console.error('[handleResendOtp] Error:', error);
       
-      let errorMessage = 'Failed to resend OTP. Please try again.';
-      if (error.message) {
-        errorMessage = error.message;
-      }
-      
-      // Show error message
-      const errorToastStyle: React.CSSProperties = {
-        background: '#EF4444',
-        color: '#fff',
-        fontSize: '14px',
-        padding: '10px 20px',
-        borderRadius: '8px',
-      };
-      
-      toast.error(errorMessage, {
-        position: 'top-center',
-        duration: 4000,
-        style: errorToastStyle,
-      });
-      
-      // If reCAPTCHA failed, reset it for next attempt
-      if (error.message?.includes('reCAPTCHA') || error.code === 'auth/captcha-check-failed') {
-        console.log('[handleResendOtp] Resetting reCAPTCHA due to error');
-        if (window.recaptchaVerifier) {
-          try { window.recaptchaVerifier.clear(); } catch (e) {}
-          delete window.recaptchaVerifier;
-          setRecaptchaVerifier(null);
-        }
+      // Handle rate limiting errors specifically
+      if (error.code === 'auth/too-many-requests' || 
+          error.message.includes('too many attempts') ||
+          error.message.includes('quota exceeded')) {
+        toast.error('Too many attempts. Please try again later.', {
+          style: {
+            background: '#EF4444',
+            color: '#fff',
+            fontSize: '14px',
+            padding: '10px 20px',
+          },
+        });
+      } else {
+        toast.error(error.message || 'Failed to resend OTP. Please try again.', {
+          style: {
+            background: '#EF4444',
+            color: '#fff',
+            fontSize: '14px',
+            padding: '10px 20px',
+          },
+        });
       }
     } finally {
       setIsLoading(false);
@@ -292,9 +307,10 @@ export default function CustomerInfoPopup({ isOpen, onClose, onSuccess }: Custom
       
       // Update UI state
       setStep('otp');
-      setCountdown(30);
+      setCountdown(60); // Changed from 30 to 60 seconds
       setOtp('');
       setOtpError('');
+      setLastOtpRequestTime(Date.now());
       
           // Show success message with proper TypeScript types
       const toastStyle: React.CSSProperties = {
