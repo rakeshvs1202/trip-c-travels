@@ -89,12 +89,14 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <body className={`${inter.variable} ${poppins.variable} font-sans`}>
+    <html lang="en" className={`${inter.variable} ${poppins.variable}`}>
+      <body className="font-sans bg-white text-gray-900">
         <Providers>
           <Header />
-          <main className="min-h-screen">{children}</main>
+          <main>{children}</main>
           <Footer />
+          {/* reCAPTCHA container for Firebase Phone Auth - must be in DOM at all times */}
+          <div id="recaptcha-container" className="hidden" />
         </Providers>
       </body>
     </html>

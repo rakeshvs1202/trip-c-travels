@@ -362,7 +362,7 @@ useEffect(()=>{
                   <ul className="space-y-3">
                     {(bookingDetails?.tripType === 'LOCAL') && (<li className="flex items-center gap-2">
                       <span className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 bg-gray-50 text-gray-600">💸</span>
-                      <span>Pay ₹{bookingDetails?.selectedCar?.localRates?.price[1]?.exKmRate}/km after limits</span>
+                      <span>Pay ₹{bookingDetails?.selectedCar?.localRates?.price[1]?.exKmRate ? bookingDetails?.selectedCar?.localRates?.price[1]?.exKmRate : 17}/km after limits</span>
                     </li>)}
                     {(bookingDetails?.tripType === 'LOCAL') && (<li className="flex items-center gap-2">
                       <span className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 bg-gray-50 text-gray-600">⏰</span>
@@ -370,7 +370,7 @@ useEffect(()=>{
                     </li>)}
                     {(bookingDetails?.tripType === 'OUTSTATION') && (<li className="flex items-center gap-2">
                       <span className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 bg-gray-50 text-gray-600">💸</span>
-                      <span>Pay ₹{bookingDetails?.selectedCar?.outstationRates?.exKmRate}/km after {baseDistance}km</span>
+                      <span>Pay ₹{bookingDetails?.selectedCar?.outstationRates?.exKmRate ? bookingDetails?.selectedCar?.outstationRates?.exKmRate : 17}/km after {baseDistance}km</span>
                     </li>)}
                     <li className="flex items-center gap-2">
                       <span className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 bg-gray-50 text-gray-600">🛣️</span>
