@@ -43,6 +43,8 @@ export default function CustomerInfoPopup({ isOpen, onClose, onSuccess }: Custom
   const [isVerified, setIsVerified] = useState(false);
   const [recaptchaVerifier, setRecaptchaVerifier] = useState<RecaptchaVerifier | null>(null);
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+  const [lastOtpRequestTime, setLastOtpRequestTime] = useState<number>(0);
+  const [retryDelay, setRetryDelay] = useState<number>(0);
 
   const validateEmail = (email: string) => /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/.test(email);
 
@@ -95,6 +97,16 @@ export default function CustomerInfoPopup({ isOpen, onClose, onSuccess }: Custom
     console.log('[requestOtp] Starting OTP request for:', phoneNumber);
     
     try {
+      // Check rate limiting
+      const now = Date.now();
+      const timeSinceLastRequest = now - lastOtpRequestTime;
+      
+      // If last request was less than 60 seconds ago, show appropriate message
+      if (timeSinceLastRequest < 60000) {
+        const remainingTime = Math.ceil((60000 - timeSinceLastRequest) / 1000);
+        throw new Error(`Please wait ${remainingTime} seconds before requesting a new OTP`);
+      }
+
       // Validate phone number format first
       if (!phoneNumber || !/^\d{10}$/.test(phoneNumber)) {
         throw new Error('Please enter a valid 10-digit phone number');
@@ -117,12 +129,12 @@ export default function CustomerInfoPopup({ isOpen, onClose, onSuccess }: Custom
       // Log reCAPTCHA verifier state
       console.log('[requestOtp] reCAPTCHA verifier state:', {
         hasVerifier: !!recaptchaVerifier,
-        windowVerifier: !!window.recaptchaVerifier
+        windowVerifier: typeof window !== 'undefined' ? !!window.recaptchaVerifier : false
       });
       
       // Create a new verifier instance if needed
       let verifier = recaptchaVerifier;
-      if (!verifier || !window.recaptchaVerifier) {
+      if (typeof window !== 'undefined' && (!verifier || !window.recaptchaVerifier)) {
         console.log('[requestOtp] Creating new reCAPTCHA verifier');
         // Clear any existing verifier
         if (window.recaptchaVerifier) {
@@ -146,6 +158,9 @@ export default function CustomerInfoPopup({ isOpen, onClose, onSuccess }: Custom
       // Always reuse the singleton verifier
       const result = await signInWithPhoneNumber(auth, formattedPhoneNumber, verifier);
       console.log('[requestOtp] OTP request successful, confirmation result received');
+      
+      // Update last request time on success
+      setLastOtpRequestTime(now);
       setConfirmationResult(result);
       return result;
     } catch (error: any) {
@@ -154,6 +169,15 @@ export default function CustomerInfoPopup({ isOpen, onClose, onSuccess }: Custom
         code: error.code,
         stack: error.stack
       });
+      
+      // Handle rate limiting specifically
+      if (error.code === 'auth/too-many-requests') {
+        // Set a retry delay with exponential backoff (max 5 minutes)
+        const newRetryDelay = Math.min((retryDelay || 30) * 2, 300);
+        setRetryDelay(newRetryDelay);
+        throw new Error(`Too many requests. Please try again in ${newRetryDelay} seconds.`);
+      }
+      
       throw error; // Re-throw to be handled by the caller
     }
   };
@@ -166,7 +190,7 @@ export default function CustomerInfoPopup({ isOpen, onClose, onSuccess }: Custom
       console.log('[handleResendOtp] Resending OTP...');
       
       // Get customer data from session storage
-      const customerData = sessionStorage.getItem('customerData');
+      const customerData = typeof window !== 'undefined' ? sessionStorage.getItem('customerData') : null;
       if (!customerData) {
         throw new Error('Session expired. Please fill out the form again.');
       }
@@ -176,57 +200,58 @@ export default function CustomerInfoPopup({ isOpen, onClose, onSuccess }: Custom
         throw new Error('Phone number not found. Please fill out the form again.');
       }
       
-      // Request new OTP
-      await requestOtp(phone);
-      
-      // Reset countdown
-      setCountdown(30);
-      
-      // Show success message
-      const toastStyle: React.CSSProperties = {
-        background: '#10B981',
-        color: '#fff',
-        fontSize: '14px',
-        padding: '10px 20px',
-        borderRadius: '8px',
-      };
-      
-      toast.success('New OTP sent successfully!', {
-        position: 'top-center',
-        duration: 3000,
-        style: toastStyle,
-      });
-      
-    } catch (error: any) {
-      console.error('[handleResendOtp] Error:', error);
-      
-      let errorMessage = 'Failed to resend OTP. Please try again.';
-      if (error.message) {
-        errorMessage = error.message;
-      }
-      
-      // Show error message
-      const errorToastStyle: React.CSSProperties = {
-        background: '#EF4444',
-        color: '#fff',
-        fontSize: '14px',
-        padding: '10px 20px',
-        borderRadius: '8px',
-      };
-      
-      toast.error(errorMessage, {
-        position: 'top-center',
-        duration: 4000,
-        style: errorToastStyle,
-      });
-      
-      // If reCAPTCHA failed, reset it for next attempt
-      if (error.message?.includes('reCAPTCHA') || error.code === 'auth/captcha-check-failed') {
-        console.log('[handleResendOtp] Resetting reCAPTCHA due to error');
-        if (window.recaptchaVerifier) {
-          try { window.recaptchaVerifier.clear(); } catch (e) {}
-          delete window.recaptchaVerifier;
-          setRecaptchaVerifier(null);
+      // Request new OTP with error handling
+      try {
+        await requestOtp(phone);
+        
+        // Reset countdown and retry delay on success
+        setCountdown(30);
+        setRetryDelay(0);
+        
+        // Show success message
+        const toastStyle: React.CSSProperties = {
+          background: '#10B981',
+          color: '#fff',
+          fontSize: '14px',
+          padding: '10px 20px',
+          borderRadius: '8px',
+        };
+        
+        toast.success('New OTP sent successfully!', {
+          position: 'top-center',
+          duration: 3000,
+          style: toastStyle,
+        });
+      } catch (error: any) {
+        console.error('[handleResendOtp] Error:', error);
+        
+        // Show error message
+        const toastStyle: React.CSSProperties = {
+          background: '#EF4444',
+          color: '#fff',
+          fontSize: '14px',
+          padding: '10px 20px',
+          borderRadius: '8px',
+        };
+        
+        toast.error(error.message || 'Failed to send OTP. Please try again.', {
+          position: 'top-center',
+          duration: 5000,
+          style: toastStyle,
+        });
+        
+        // If we have a retry delay, show a countdown
+        if (retryDelay > 0) {
+          setCountdown(retryDelay);
+          const interval = setInterval(() => {
+            setCountdown(prev => {
+              if (prev <= 1) {
+                clearInterval(interval);
+                return 0;
+              }
+              return prev - 1;
+            });
+          }, 1000);
         }
       }
     } finally {
@@ -296,7 +321,7 @@ export default function CustomerInfoPopup({ isOpen, onClose, onSuccess }: Custom
       setOtp('');
       setOtpError('');
       
-          // Show success message with proper TypeScript types
+      // Show success message with proper TypeScript types
       const toastStyle: React.CSSProperties = {
         background: '#10B981',
         color: '#fff',
@@ -413,7 +438,7 @@ export default function CustomerInfoPopup({ isOpen, onClose, onSuccess }: Custom
       // Clear session storage
       sessionStorage.clear();
       
-          // Show success message with proper TypeScript types
+      // Show success message with proper TypeScript types
       const toastStyle: React.CSSProperties = {
         background: '#10B981',
         color: '#fff',
