@@ -8,7 +8,11 @@ import { carData } from "@/scripts/seed-data"
 import LoadingSpinner from "@/components/ui/LoadingSpinner"
 import dynamic from 'next/dynamic';
 import { toast } from 'sonner';
-import CustomerInfoPopup from '@/components/CustomerInfoPopup';
+
+const CustomerInfoPopup = dynamic(
+  () => import('@/components/CustomerInfoPopup'),
+  { ssr: false }
+);
 
 
 
@@ -44,34 +48,37 @@ export default function SelectCar() {
     toast.success('Customer information saved successfully!');
   };
 
+  // Use a state to track if we're on the client
+  const [isClient, setIsClient] = useState(false);
+
   useEffect(() => {
-    // Only run on client side
-    if (typeof window !== 'undefined') {
-      // Get booking data from sessionStorage
-      const storedData = sessionStorage.getItem('bookingData');
-      if (storedData) {
-        const parsedData = JSON.parse(storedData);
-        // Convert string dates back to Date objects
-        if (parsedData.pickupDate) {
-          parsedData.pickupDate = new Date(parsedData.pickupDate);
-        }
-        if (parsedData.returnDate) {
-          parsedData.returnDate = new Date(parsedData.returnDate);
-        }
-        setBookingData(parsedData);
-
-        // Set default selected option for LOCAL trips
-        if (parsedData.tripType === 'LOCAL') {
-          setSelectedOption('4hrs | 40kms');
-        }
-      } else {
-        router.push('/');
+    // This effect runs only on the client
+    setIsClient(true);
+    
+    // Get booking data from sessionStorage
+    const storedData = sessionStorage.getItem('bookingData');
+    if (storedData) {
+      const parsedData = JSON.parse(storedData);
+      // Convert string dates back to Date objects
+      if (parsedData.pickupDate) {
+        parsedData.pickupDate = new Date(parsedData.pickupDate);
       }
+      if (parsedData.returnDate) {
+        parsedData.returnDate = new Date(parsedData.returnDate);
+      }
+      setBookingData(parsedData);
 
-      // Use the car data from seed-data
-      setCars(carData as CarData[]);
-      setLoading(false);
+      // Set default selected option for LOCAL trips
+      if (parsedData.tripType === 'LOCAL') {
+        setSelectedOption('4hrs | 40kms');
+      }
+    } else {
+      router.push('/');
     }
+
+    // Use the car data from seed-data
+    setCars(carData as CarData[]);
+    setLoading(false);
   }, [router])
 
 
@@ -92,14 +99,14 @@ export default function SelectCar() {
       }
     }
     
-    // Sync baseDistance with the new calculated value
-    if (typeof window !== 'undefined') {
+    // Only access sessionStorage on the client side
+    if (isClient) {
       sessionStorage.setItem('baseDistance', baseDist.toString());
     }
     setBaseDistance(baseDist);
     
     return { tripDays: days, calculatedBaseDistance: baseDist };
-  }, [bookingData?.pickupDate, bookingData?.returnDate]);
+  }, [bookingData?.pickupDate, bookingData?.returnDate, isClient]);
 
   const calculatePrice = useCallback((car: any) => {
     if (!bookingData) return 0;
@@ -183,7 +190,9 @@ export default function SelectCar() {
       
       // Update state and storage
       setBookingData(updatedData);
-      if (typeof window !== 'undefined') {
+      
+      // Only update sessionStorage on the client side
+      if (isClient) {
         sessionStorage.setItem('bookingData', JSON.stringify(updatedData));
         sessionStorage.setItem("bookingFare", price.toString());
       }
