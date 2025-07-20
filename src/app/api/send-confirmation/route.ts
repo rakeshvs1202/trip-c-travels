@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 // CORS headers
-export const corsHeaders = {
+const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
@@ -80,7 +80,7 @@ export async function POST(request: Request) {
                           hour12: true
                         }),                                                             // {{6}}
                         bookingDetails.selectedCar?.name || 'N/A',                      // {{7}}
-                       `INR ${bookingDetails.bookingData.totalFare}`   // {{8}}
+                       `₹ ${bookingDetails.bookingData.totalFare}`   // {{8}}
                     ]
                   }
                 },
@@ -181,7 +181,10 @@ const data = await mailjetResponse.json();
             message: 'Invalid Mailjet API Key or Secret',
             details: data 
           },
-          { status: 401 }
+          { 
+            status: 401,
+            headers: corsHeaders
+          }
         );
       }
 
@@ -212,26 +215,25 @@ const data = await mailjetResponse.json();
       whatsappStatus: whatsappResponse?.status
     };
 
-    const corsHeaders = {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    };
-
     return NextResponse.json(response, { status: 200, headers: corsHeaders });
   } catch (error) {
     console.error('Error in send-confirmation:', error);
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
+      { 
+        error: 'Internal server error', 
+        details: error instanceof Error ? error.message : 'Unknown error' 
+      },
+      { status: 500, headers: corsHeaders }
     );
   }
 }
 
-
 export async function OPTIONS() {
   return new Response(null, {
     status: 204,
-    headers: corsHeaders
+    headers: {
+      ...corsHeaders,
+      'Allow': 'POST, OPTIONS'
+    }
   });
 }
