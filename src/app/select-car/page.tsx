@@ -265,10 +265,22 @@ export default function SelectCar() {
 
           {(activeTab === 'exclusions' && bookingData?.tripType === 'LOCAL') && (
             <div className="space-y-3">
-              <p className="flex items-start gap-2"><Image src="/rejectionImg.png" alt="" width={20} height={20} className="w-5 h-5 mt-0.5 flex-shrink-0" /> Pay ₹{car.localRates.price[1].exKmRate}/km after {parseInt(selectedOption.split('|')[1].trim().replace('kms', ''))}km</p>
-              <p className="flex items-start gap-2"><Image src="/rejectionImg.png" alt="" width={20} height={20} className="w-5 h-5 mt-0.5 flex-shrink-0" /> Pay ₹{car.localRates?.price[1]?.exMinRate * 60}/hr after {parseInt(selectedOption.split('|')[0].trim().replace('hrs', ''))} hours</p>
-              <p className="flex items-start gap-2"><Image src="/rejectionImg.png" alt="" width={20} height={20} className="w-5 h-5 mt-0.5 flex-shrink-0" /> Toll / State tax</p>
-              <p className="flex items-start gap-2"><Image src="/rejectionImg.png" alt="" width={20} height={20} className="w-5 h-5 mt-0.5 flex-shrink-0" /> Parking charges</p>
+              <p className="flex items-start gap-2">
+                <span className="w-5 h-5 flex items-center justify-center rounded-full border border-gray-300 bg-gray-50 text-gray-600">💸</span>
+                Pay ₹{car.localRates.price[1].exKmRate}/km after {parseInt(selectedOption.split('|')[1].trim().replace('kms', ''))}km
+              </p>
+              <p className="flex items-start gap-2">
+                <span className="w-5 h-5 flex items-center justify-center rounded-full border border-gray-300 bg-gray-50 text-gray-600">⏰</span>
+                Pay ₹{car.localRates?.price[1]?.exMinRate * 60}/hr after {parseInt(selectedOption.split('|')[0].trim().replace('hrs', ''))} hours
+              </p>
+              <p className="flex items-start gap-2">
+                <span className="w-5 h-5 flex items-center justify-center rounded-full border border-gray-300 bg-gray-50 text-gray-600">🛣️</span>
+                Toll / State tax
+              </p>
+              <p className="flex items-start gap-2">
+                <span className="w-5 h-5 flex items-center justify-center rounded-full border border-gray-300 bg-gray-50 text-gray-600">🅿️</span>
+                Parking charges
+              </p>
             </div>
           )}
           {(activeTab === 'exclusions' && bookingData?.tripType === 'OUTSTATION') && (
